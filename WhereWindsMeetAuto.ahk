@@ -164,7 +164,7 @@ RunPlaySwing(*) {
 }
 
 ; =============================================================================
-; Hotkeys (unchanged behaviour — same as WhereWindsMeetAuto.ahk)
+; Hotkeys
 ; =============================================================================
 
 ^!c:: RunCatchFish()   ; Ctrl+Alt+C — Catch Fish
