@@ -13,32 +13,54 @@ global GAME_TITLE := "Where Winds Meet"
 ; Prevents two macros from running simultaneously.
 global activeMacro := ""
 
+; Set to true by the Esc hotkey to signal the active macro to stop.
+; Reset to false at the start of each macro run.
+global stopRequested := false
+
 ; =============================================================================
 ; Helper Functions
 ; =============================================================================
 
+; Hotkey handler registered while a macro is running.
+; Uses a named function (not a closure) to avoid by-ref capture issues.
+RequestStop(*) {
+    global stopRequested
+    stopRequested := true
+}
+
 ; Attempts to start a macro. Returns true if the macro may proceed, false if
-; this macro or any other macro is already running.
-; Registers Esc to flip the running flag off.
-StartMacro(&running, name) {
-    global activeMacro
-    if running
-        return false
+; any other macro is already running.
+; Resets stopRequested and enables the Esc hotkey.
+StartMacro(name) {
+    global activeMacro, stopRequested
     if activeMacro != ""
         return false
-    running := true
     activeMacro := name
-    Hotkey "Esc", (*) => (running := false), "On"
+    stopRequested := false
+    Hotkey "Esc", RequestStop, "On"
     return true
 }
 
-; Cleans up after a macro loop ends: clears the running flag, resets the
-; global active macro tracker, and disables the Esc hotkey.
-StopMacro(&running) {
+; Cleans up after a macro loop ends: resets the global active macro tracker
+; and disables the Esc hotkey.
+StopMacro() {
     global activeMacro
-    running := false
     activeMacro := ""
     Hotkey "Esc", "Off"
+}
+
+; Sleeps for ms milliseconds in 50 ms increments, returning early if
+; stopRequested is set. This keeps Esc responsive during long waits.
+SleepChecked(ms) {
+    global stopRequested
+    loop (ms // 50) {
+        if stopRequested
+            return
+        Sleep 50
+    }
+    remainder := Mod(ms, 50)
+    if remainder > 0 && !stopRequested
+        Sleep remainder
 }
 
 ; Focuses the game window. Returns true on success, false if the window was
@@ -73,102 +95,102 @@ MakeStartHandler(fn) {
 ; =============================================================================
 
 RunCatchFish(*) {
-    static running := false
-    if !StartMacro(&running, "Catch Fish")
+    global stopRequested
+    if !StartMacro("Catch Fish")
         return
     loop {
-        if !running
+        if stopRequested
             break
         GameSend "{Alt down}"
-        Sleep 1000
+        SleepChecked 1000
         GameSend "2"
         GameSend "{Alt up}"
-        Sleep 1000
+        SleepChecked 1000
     }
-    StopMacro(&running)
+    StopMacro()
 }
 
 RunToxicPowder(*) {
-    static running := false
-    if !StartMacro(&running, "Farm Toxic Powder")
+    global stopRequested
+    if !StartMacro("Farm Toxic Powder")
         return
     loop {
-        if !running
+        if stopRequested
             break
         GameSend "{Space down}"
-        Sleep 1000
+        SleepChecked 1000
         GameSend "{Space up}"
-        Sleep 750
+        SleepChecked 750
         GameSend "{Space}"
-        Sleep 4500
+        SleepChecked 4500
         GameSend "q"
-        Sleep 1500
+        SleepChecked 1500
         GameSend "1"
-        Sleep 10000
+        SleepChecked 10000
     }
-    StopMacro(&running)
+    StopMacro()
 }
 
 RunGatherHerbF(*) {
-    static running := false
-    if !StartMacro(&running, "Gather Herb (F)")
+    global stopRequested
+    if !StartMacro("Gather Herb (F)")
         return
     loop {
-        if !running
+        if stopRequested
             break
         GameSend "f"
-        Sleep 200
+        SleepChecked 200
         GameSend "z"
-        Sleep 200
+        SleepChecked 200
     }
-    StopMacro(&running)
+    StopMacro()
 }
 
 RunGatherHerbN(*) {
-    static running := false
-    if !StartMacro(&running, "Gather Herb (N)")
+    global stopRequested
+    if !StartMacro("Gather Herb (N)")
         return
     loop {
-        if !running
+        if stopRequested
             break
         GameSend "{n down}"
-        Sleep 1000
+        SleepChecked 1000
         GameSend "{n up}"
-        Sleep 100
+        SleepChecked 100
         GameSend "{Esc}"
-        Sleep 200
+        SleepChecked 200
         GameSend "z"
-        Sleep 200
+        SleepChecked 200
     }
-    StopMacro(&running)
+    StopMacro()
 }
 
 RunMineStone(*) {
-    static running := false
-    if !StartMacro(&running, "Mine Stone")
+    global stopRequested
+    if !StartMacro("Mine Stone")
         return
     loop {
-        if !running
+        if stopRequested
             break
         GameSend "q"
-        Sleep 200
+        SleepChecked 200
         GameSend "``"
-        Sleep 200
+        SleepChecked 200
     }
-    StopMacro(&running)
+    StopMacro()
 }
 
 RunPlaySwing(*) {
-    static running := false
-    if !StartMacro(&running, "Play Swing")
+    global stopRequested
+    if !StartMacro("Play Swing")
         return
     loop {
-        if !running
+        if stopRequested
             break
         GameSend "f"
-        Sleep 200
+        SleepChecked 200
     }
-    StopMacro(&running)
+    StopMacro()
 }
 
 ; =============================================================================
