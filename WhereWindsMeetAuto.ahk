@@ -1,10 +1,13 @@
 #Requires AutoHotkey v2.0
 
-SetTitleMatchMode 3   ; exact title match — "Where Winds Meet" must match precisely
+SetTitleMatchMode 3   ; exact title match — GAME_TITLE must match precisely
 
 ; =============================================================================
 ; Global State
 ; =============================================================================
+
+; Title of the game window — single source of truth used throughout the script.
+global GAME_TITLE := "Where Winds Meet"
 
 ; Name of the currently active macro, or "" if none is running.
 ; Prevents two macros from running simultaneously.
@@ -41,16 +44,23 @@ StopMacro(&running) {
 ; Focuses the game window. Returns true on success, false if the window was
 ; not found or could not be activated within 3 seconds.
 FocusGame() {
-    if !WinExist("Where Winds Meet") {
-        MsgBox "Where Winds Meet is not running.", "Where Winds Meet Auto", "Icon!"
+    global GAME_TITLE
+    if !WinExist(GAME_TITLE) {
+        MsgBox(GAME_TITLE " is not running.", GAME_TITLE " Auto", "Icon!")
         return false
     }
-    WinActivate "Where Winds Meet"
-    WinWaitActive "Where Winds Meet", , 3
-    if WinActive("Where Winds Meet")
+    WinActivate GAME_TITLE
+    WinWaitActive GAME_TITLE, , 3
+    if WinActive(GAME_TITLE)
         return true
-    MsgBox "Could not focus Where Winds Meet.", "Where Winds Meet Auto", "Icon!"
+    MsgBox("Could not focus " GAME_TITLE ".", GAME_TITLE " Auto", "Icon!")
     return false
+}
+
+; Sends keystrokes directly to the game window without requiring focus.
+GameSend(keys) {
+    global GAME_TITLE
+    ControlSend keys, , GAME_TITLE
 }
 
 ; Factory that captures fn at call time so each button gets its own closure.
@@ -69,10 +79,10 @@ RunCatchFish(*) {
     loop {
         if !running
             break
-        Send "{Alt down}"
+        GameSend "{Alt down}"
         Sleep 1000
-        Send "2"
-        Send "{Alt up}"
+        GameSend "2"
+        GameSend "{Alt up}"
         Sleep 1000
     }
     StopMacro(&running)
@@ -85,15 +95,15 @@ RunToxicPowder(*) {
     loop {
         if !running
             break
-        Send "{Space down}"
+        GameSend "{Space down}"
         Sleep 1000
-        Send "{Space up}"
+        GameSend "{Space up}"
         Sleep 750
-        Send "{Space}"
+        GameSend "{Space}"
         Sleep 4500
-        Send "q"
+        GameSend "q"
         Sleep 1500
-        Send "1"
+        GameSend "1"
         Sleep 10000
     }
     StopMacro(&running)
@@ -106,9 +116,9 @@ RunGatherHerbF(*) {
     loop {
         if !running
             break
-        Send "f"
+        GameSend "f"
         Sleep 200
-        Send "z"
+        GameSend "z"
         Sleep 200
     }
     StopMacro(&running)
@@ -121,15 +131,13 @@ RunGatherHerbN(*) {
     loop {
         if !running
             break
-        Send "{n down}"
+        GameSend "{n down}"
         Sleep 1000
-        Send "{n up}"
+        GameSend "{n up}"
         Sleep 100
-        Hotkey "Esc", "Off"
-        Send "{Esc}"
-        Hotkey "Esc", "On"
+        GameSend "{Esc}"
         Sleep 200
-        Send "z"
+        GameSend "z"
         Sleep 200
     }
     StopMacro(&running)
@@ -142,9 +150,9 @@ RunMineStone(*) {
     loop {
         if !running
             break
-        Send "q"
+        GameSend "q"
         Sleep 200
-        Send "``"
+        GameSend "``"
         Sleep 200
     }
     StopMacro(&running)
@@ -157,7 +165,7 @@ RunPlaySwing(*) {
     loop {
         if !running
             break
-        Send "f"
+        GameSend "f"
         Sleep 200
     }
     StopMacro(&running)
@@ -202,7 +210,7 @@ global features := [
 ; Function references in the same order as features above.
 global macroFuncs := [RunCatchFish, RunToxicPowder, RunGatherHerbF, RunGatherHerbN, RunMineStone, RunPlaySwing]
 
-AppGui := Gui("-Resize", "Where Winds Meet Auto")
+AppGui := Gui("-Resize", GAME_TITLE " Auto")
 
 ; --- Status row ---
 AppGui.SetFont("s9 Norm", "Segoe UI")
