@@ -110,9 +110,9 @@ RunCatchFish(*) {
     StopMacro()
 }
 
-RunToxicPowder(*) {
+RunToxicPowderWBW(*) {
     global stopRequested
-    if !StartMacro("Farm Toxic Powder")
+    if !StartMacro("Farm Toxic Powder (Wind Beneath Wings)")
         return
     loop {
         if stopRequested
@@ -126,6 +126,91 @@ RunToxicPowder(*) {
         GameSend "q"
         SleepChecked 1500
         GameSend "1"
+        SleepChecked 10000
+    }
+    StopMacro()
+}
+
+RunToxicPowderSilkbind(*) {
+    global stopRequested
+    if !StartMacro("Farm Toxic Powder (Silkbind - Deluge)")
+        return
+    loop {
+        if stopRequested
+            break
+        GameSend "{Space down}"
+        SleepChecked 1000
+        GameSend "{Space up}"
+        SleepChecked 750
+        GameSend "{Space}"
+        SleepChecked 4500
+        GameSend "q"
+        SleepChecked 1500
+        GameSend "1"
+        SleepChecked 3000
+        GameSend "q"
+        SleepChecked 1000
+        GameSend "q"
+        SleepChecked 6000
+    }
+    StopMacro()
+}
+
+RunBeefTendon(*) {
+    global stopRequested
+    if !StartMacro("Farm Beef Tendon")
+        return
+    loop {
+        if stopRequested
+            break
+        GameSend "{Space down}"
+        SleepChecked 1000
+        GameSend "{Space up}"
+        SleepChecked 750
+        GameSend "{Space}"
+        SleepChecked 4500
+        GameSend "q"
+        SleepChecked 1500
+        GameSend "1"
+        SleepChecked 3000
+        GameSend "q"
+        SleepChecked 1000
+        GameSend "q"
+        SleepChecked 3000
+        loop 15 {
+            GameSend "s"
+            SleepChecked 20
+        }
+        loop 15 {
+            GameSend "a"
+            SleepChecked 20
+        }
+        loop 25 {
+            GameSend "w"
+            SleepChecked 20
+        }
+        loop 15 {
+            GameSend "d"
+            SleepChecked 20
+        }
+        SleepChecked 200
+        GameSend "f"
+        loop 15 {
+            GameSend "a"
+            SleepChecked 20
+        }
+        loop 40 {
+            GameSend "s"
+            SleepChecked 20
+        }
+        loop 15 {
+            GameSend "d"
+            SleepChecked 20
+        }
+        loop 25 {
+            GameSend "w"
+            SleepChecked 20
+        }
         SleepChecked 10000
     }
     StopMacro()
@@ -197,8 +282,10 @@ RunPlaySwing(*) {
 ; Hotkeys
 ; =============================================================================
 
-^!c:: RunCatchFish()   ; Ctrl+Alt+C — Catch Fish
-^!f:: RunToxicPowder() ; Ctrl+Alt+F — Farm Toxic Powder
+^!c:: RunCatchFish()            ; Ctrl+Alt+C — Catch Fish
+^!f:: RunToxicPowderWBW()      ; Ctrl+Alt+F — Farm Toxic Powder (Wind Beneath Wings)
+^!t:: RunToxicPowderSilkbind() ; Ctrl+Alt+T — Farm Toxic Powder (Silkbind - Deluge)
+^!b:: RunBeefTendon()          ; Ctrl+Alt+B — Farm Beef Tendon
 ^!g:: RunGatherHerbF() ; Ctrl+Alt+G — Gather Herb (F)
 ^!n:: RunGatherHerbN() ; Ctrl+Alt+N — Gather Herb (N)
 ^!m:: RunMineStone()   ; Ctrl+Alt+M — Mine Stone
@@ -208,29 +295,28 @@ RunPlaySwing(*) {
 ; GUI — Feature list with hotkeys, notes, and Start buttons
 ; =============================================================================
 
-global features := [
-    { name: "Catch Fish",
-      hotkey: "Ctrl+Alt+C",
-      notes: "Requires: Alt+2 set to Tai Chi" },
-    { name: "Farm Toxic Powder",
-      hotkey: "Ctrl+Alt+F",
-      notes: "Requires: Toxic Power Farm Tower`nMust be farmable manually first`nKeys: Space (Jump), Q (Mighty Drop), 1 (Dragon's Breath)" },
-    { name: "Gather Herb (F)",
-      hotkey: "Ctrl+Alt+G",
-      notes: "Requires: Horse - Spirited Courser (call it, press F to mount)`nKeys: F (Interaction), Z (Temp Skill)" },
-    { name: "Gather Herb (N)",
-      hotkey: "Ctrl+Alt+N",
-      notes: "Requires: Horse - Spirited Courser + map marker placed`nKeys: N (Wayfinder), Z (Temp Skill)" },
-    { name: "Mine Stone",
-      hotkey: "Ctrl+Alt+M",
-      notes: "Requires: Weapon - Thundercry Blade`nKeys: Q (Martial Art Skill), ``/~ (Special Skill)" },
-    { name: "Play Swing",
-      hotkey: "Ctrl+Alt+P",
-      notes: "Go to Swing Play on a boat, press F to sit down first`nKeys: F (Interaction)" },
+global features := [{ name: "Catch Fish",
+    hotkey: "Ctrl+Alt+C",
+    notes: "Requires: Alt+2 set to Tai Chi" }, { name: "Farm Toxic Powder (Wind Beneath Wings)",
+        hotkey: "Ctrl+Alt+F",
+        notes: "Requires: Toxic Power Farm Tower, Wind Beneath Wings, Auto Recovery`nMust be farmable manually first`nKeys: Space (Jump), Q (Mighty Drop), 1 (Dragon's Breath)" }, { name: "Farm Toxic Powder (Silkbind - Deluge)",
+            hotkey: "Ctrl+Alt+T",
+            notes: "Requires: Toxic Power Farm Tower, Silkbind - Deluge`nMust be farmable manually first`nKeys: Space (Jump), Q (Mighty Drop), 1 (Dragon's Breath)" }, { name: "Farm Beef Tendon",
+                hotkey: "Ctrl+Alt+B",
+                notes: "Requires: Beef Tendon Farm Tower, Silkbind - Deluge (Wind Beneath Wings not working)`nMust be farmable manually first`nKeys: Space (Jump), Q (Mighty Drop), 1 (Dragon's Breath)" }, { name: "Gather Herb (F)",
+                    hotkey: "Ctrl+Alt+G",
+                    notes: "Requires: Horse - Spirited Courser (call it, press F to mount)`nKeys: F (Interaction), Z (Temp Skill)" }, { name: "Gather Herb (N)",
+                        hotkey: "Ctrl+Alt+N",
+                        notes: "Requires: Horse - Spirited Courser + map marker placed`nKeys: N (Wayfinder), Z (Temp Skill)" }, { name: "Mine Stone",
+                            hotkey: "Ctrl+Alt+M",
+                            notes: "Requires: Weapon - Thundercry Blade`nKeys: Q (Martial Art Skill), ``/~ (Special Skill)" }, { name: "Play Swing",
+                                hotkey: "Ctrl+Alt+P",
+                                notes: "Go to Swing Play on a boat, press F to sit down first`nKeys: F (Interaction)" },
 ]
 
 ; Function references in the same order as features above.
-global macroFuncs := [RunCatchFish, RunToxicPowder, RunGatherHerbF, RunGatherHerbN, RunMineStone, RunPlaySwing]
+global macroFuncs := [RunCatchFish, RunToxicPowderWBW, RunToxicPowderSilkbind, RunBeefTendon, RunGatherHerbF,
+    RunGatherHerbN, RunMineStone, RunPlaySwing]
 
 AppGui := Gui("-Resize", GAME_TITLE " Auto")
 
@@ -238,16 +324,16 @@ AppGui := Gui("-Resize", GAME_TITLE " Auto")
 AppGui.SetFont("s9 Norm", "Segoe UI")
 AppGui.Add("Text", "x12 y15 w98", "Active Macro:")
 AppGui.SetFont("s10 Bold", "Segoe UI")
-global activeLabel := AppGui.Add("Text", "x113 y14 w247", "None")
+global activeLabel := AppGui.Add("Text", "x113 y14 w379", "None")
 
 ; --- Divider ---
-AppGui.Add("Text", "x8 y34 w354 h1 +0x10")
+AppGui.Add("Text", "x8 y34 w484 h1 +0x10")
 
 ; --- Column headers ---
 AppGui.SetFont("s8 Bold", "Segoe UI")
-AppGui.Add("Text", "x12  y44 w153", "FEATURE")
-AppGui.Add("Text", "x170 y44 w105", "HOTKEY")
-AppGui.Add("Text", "x280 y44 w80",  "ACTION")
+AppGui.Add("Text", "x12  y44 w294", "FEATURE")
+AppGui.Add("Text", "x314 y44 w90", "HOTKEY")
+AppGui.Add("Text", "x412 y44 w80", "ACTION")
 
 ; --- Feature rows ---
 rowY := 62
@@ -256,23 +342,23 @@ for i, feat in features {
 
     ; Feature name (bold heading), hotkey, and Start button
     AppGui.SetFont("s10 Bold", "Segoe UI")
-    AppGui.Add("Text",   "x12  y" rowY      " w153 h22", feat.name)
+    AppGui.Add("Text", "x12  y" rowY " w294 h22", feat.name)
     AppGui.SetFont("s10 Norm", "Segoe UI")
-    AppGui.Add("Text",   "x170 y" rowY      " w105 h22", feat.hotkey)
-    btn := AppGui.Add("Button", "x280 y" (rowY - 1) " w80 h24", "Start")
+    AppGui.Add("Text", "x314 y" rowY " w90 h22", feat.hotkey)
+    btn := AppGui.Add("Button", "x412 y" (rowY - 1) " w80 h24", "Start")
     btn.OnEvent("Click", MakeStartHandler(fn))
     rowY += 24
 
     ; Notes (secondary, indented)
     AppGui.SetFont("s8 Norm", "Segoe UI")
     noteLines := StrSplit(feat.notes, "`n").Length
-    noteH     := noteLines * 16
-    AppGui.Add("Text", "x24 y" rowY " w336 h" noteH, feat.notes)
+    noteH := noteLines * 16
+    AppGui.Add("Text", "x24 y" rowY " w460 h" noteH, feat.notes)
     rowY += noteH + 12
 }
 
 ; --- Divider ---
-AppGui.Add("Text", "x8 y" rowY " w354 h1 +0x10")
+AppGui.Add("Text", "x8 y" rowY " w484 h1 +0x10")
 rowY += 10
 
 ; --- Stop button + hint ---
@@ -280,9 +366,9 @@ AppGui.SetFont("s9 Norm", "Segoe UI")
 stopBtn := AppGui.Add("Button", "x12 y" rowY " w90 h26", "Stop  (Esc)")
 stopBtn.OnEvent("Click", (*) => Send("{Esc}"))
 AppGui.SetFont("s8 Norm", "Segoe UI")
-AppGui.Add("Text", "x112 y" (rowY + 6) " w248", "Press Esc anytime to stop the active macro")
+AppGui.Add("Text", "x112 y" (rowY + 6) " w380", "Press Esc anytime to stop the active macro")
 
-AppGui.Show("w370")
+AppGui.Show("w500")
 
 ; --- Close button hides the window instead of exiting ---
 AppGui.OnEvent("Close", (*) => AppGui.Hide())
