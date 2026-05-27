@@ -1,4 +1,4 @@
-#Requires AutoHotkey v2.0
+﻿#Requires AutoHotkey v2.0
 
 SetTitleMatchMode 3   ; exact title match — GAME_TITLE must match precisely
 
@@ -88,6 +88,14 @@ GameSend(keys) {
 ; Factory that captures fn at call time so each button gets its own closure.
 MakeStartHandler(fn) {
     return (*) => (FocusGame() && fn())
+}
+
+OpenLink(ctrl, id, href) {
+    Run href
+}
+
+MakeUrlText(url) {
+    return '<a href="' url '">Youtube Guide</a>'
 }
 
 ; =============================================================================
@@ -297,21 +305,29 @@ RunPlaySwing(*) {
 
 global features := [{ name: "Catch Fish",
     hotkey: "Ctrl+Alt+C",
+    url: "",
     notes: "Requires: Alt+2 set to Tai Chi" }, { name: "Farm Toxic Powder (Wind Beneath Wings)",
         hotkey: "Ctrl+Alt+F",
-        notes: "Requires: Toxic Powder Farm Tower, Wind Beneath Wings, Auto Recovery`nMust be farmable manually first`nKeys: Space (Jump), Q (Mighty Drop), 1 (Dragon's Breath)" }, { name: "Farm Toxic Powder (Silkbind - Deluge)",
+        url: "https://www.youtube.com/watch?v=hl45VFzlvcY",
+    notes: "Requires: Toxic Powder Farm Tower, Wind Beneath Wings, Auto Recovery`nKeys: Space (Jump), Q (Mighty Drop), 1 (Dragon's Breath)" }, { name: "Farm Toxic Powder (Silkbind - Deluge)",
+            url: "https://www.youtube.com/watch?v=hl45VFzlvcY",
             hotkey: "Ctrl+Alt+T",
-            notes: "Requires: Toxic Powder Farm Tower, Silkbind - Deluge`nMust be farmable manually first`nKeys: Space (Jump), Q (Mighty Drop), 1 (Dragon's Breath)" }, { name: "Farm Beef Tendon",
+            notes: "Requires: Toxic Powder Farm Tower, Silkbind - Deluge`nKeys: Space (Jump), Q (Mighty Drop), 1 (Dragon's Breath)" }, { name: "Farm Beef Tendon (unstable)",
+                url: "https://www.youtube.com/watch?v=QqNRHs7eag0",
                 hotkey: "Ctrl+Alt+B",
-                notes: "Requires: Beef Tendon Farm Tower, Silkbind - Deluge (Wind Beneath Wings not working)`nMust be farmable manually first`nKeys: Space (Jump), Q (Mighty Drop), 1 (Dragon's Breath)" }, { name: "Gather Herb (F)",
+                notes: "Requires: Beef Tendon Farm Tower, Silkbind - Deluge (Wind Beneath Wings not working)`nKeys: Space (Jump), Q (Mighty Drop), 1 (Dragon's Breath)" }, { name: "Gather Herb (F)",
                     hotkey: "Ctrl+Alt+G",
-                    notes: "Requires: Horse - Spirited Courser (call it, press F to mount)`nKeys: F (Interaction), Z (Temp Skill)" }, { name: "Gather Herb (N)",
+                    url: "",
+    notes: "Requires: Horse - Spirited Courser (call it, press F to mount)`nKeys: F (Interaction), Z (Temp Skill)" }, { name: "Gather Herb (N)",
                         hotkey: "Ctrl+Alt+N",
-                        notes: "Requires: Horse - Spirited Courser + map marker placed`nKeys: N (Wayfinder), Z (Temp Skill)" }, { name: "Mine Stone",
+                        url: "",
+    notes: "Requires: Horse - Spirited Courser + map marker placed`nKeys: N (Wayfinder), Z (Temp Skill)" }, { name: "Mine Stone",
                             hotkey: "Ctrl+Alt+M",
-                            notes: "Requires: Weapon - Thundercry Blade`nKeys: Q (Martial Art Skill), ``/~ (Special Skill)" }, { name: "Play Swing",
+                            url: "",
+    notes: "Requires: Weapon - Thundercry Blade`nKeys: Q (Martial Art Skill), ``/~ (Special Skill)" }, { name: "Play Swing",
                                 hotkey: "Ctrl+Alt+P",
-                                notes: "Go to Swing Play on a boat, press F to sit down first`nKeys: F (Interaction)" },
+                                url: "",
+    notes: "Go to Swing Play on a boat, press F to sit down first`nKeys: F (Interaction)" },
 ]
 
 ; Function references in the same order as features above.
@@ -354,7 +370,14 @@ for i, feat in features {
     noteLines := StrSplit(feat.notes, "`n").Length
     noteH := noteLines * 16
     AppGui.Add("Text", "x24 y" rowY " w460 h" noteH, feat.notes)
-    rowY += noteH + 12
+    rowY += noteH
+    if feat.url != "" {
+        linkH := 16
+        lnk := AppGui.Add("Link", "x24 y" rowY " w460 h" linkH, MakeUrlText(feat.url))
+        lnk.OnEvent("Click", OpenLink)
+        rowY += linkH
+    }
+    rowY += 12
 }
 
 ; --- Divider ---
