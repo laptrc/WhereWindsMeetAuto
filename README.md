@@ -2,6 +2,8 @@
 
 AutoHotkey v2 automation script for _Where Winds Meet_ with a GUI launcher and hotkeys for fishing, herb gathering, mining, farming, and mini-games.
 
+[![AutoHotkey v2](https://img.shields.io/badge/AutoHotkey-v2-blue)](https://www.autohotkey.com/)
+
 ![Where Winds Meet Auto GUI](images/WhereWindsMeetAuto.png)
 
 ---
@@ -51,20 +53,36 @@ AutoHotkey v2 automation script for _Where Winds Meet_ with a GUI launcher and h
 
 ## Farm Beef Tendon (unstable)
 
-The respawn point of the enemy often changes between sessions, so this macro may need adjustments each time.
+> ⚠️ Enemy respawn position changes between sessions, so movement timings
+> usually need tweaking after each login.
 
-- It is highly recommended to make your own changes and run the script directly.
-- Update the number of repetitions to control how your character collects items.
+### AutoHotkey
 
-**AutoHotkey**
+The macro walks the character along a fixed path to collect drops using
+`GameHold(key, ms)` (hold a movement key for a set duration, then release).
 
-![Farm Beef Tendon AutoHotKey](images/FarmBeefTendonAutoHotkey.png)
+Edit the `GameHold` durations under the `; --- walk to drops ---` and `; --- reposition for next loop ---` comments in `RunBeefTendon()` to match your current tower layout. Increase the value if the character falls short; decrease if it overshoots.
 
-**Macro Recorder**
+### Macro Recorder (not recommended)
+
+Since **Where Winds Meet v1.7**, rapid successive key taps no longer move
+the character reliably. Macro Recorder scripts using repeated keypress
+loops are therefore broken or imprecise:
+
+| Loop type                         | Result      | Reason                                                                       |
+| --------------------------------- | ----------- | ---------------------------------------------------------------------------- |
+| `Repeat from label for X times`   | ❌ Broken   | Rapid taps make the character move erratically                               |
+| `Repeat from label for X seconds` | ⚠️ Unusable | Timer only accepts whole seconds; movement here needs ~100–2000 ms precision |
+
+You may still experiment with Macro Recorder if you prefer a visual
+workflow, but for reliable movement timing AutoHotkey is strongly
+recommended. See the image below for where to update your key timings/repetitions.
 
 ![Farm Beef Tendon Macro Recorder](images/FarmBeefTendonMacroRecorder.png)
 
-**Tower setup** — Build it like this to prevent the character from going outside the tower:
+### Tower Layout
+
+Build the tower like below so the character cannot walk outside:
 
 ![Beef Tendon Farm Tower](images/BeefTendonFarmTower.jpg)
 

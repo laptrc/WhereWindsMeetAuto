@@ -85,6 +85,13 @@ GameSend(keys) {
     ControlSend keys, , GAME_TITLE
 }
 
+; Holds a key down for ms milliseconds, then releases it.
+GameHold(key, ms) {
+    GameSend "{" key " down}"
+    SleepChecked ms
+    GameSend "{" key " up}"
+}
+
 ; Factory that captures fn at call time so each button gets its own closure.
 MakeStartHandler(fn) {
     return (*) => (FocusGame() && fn())
@@ -125,9 +132,7 @@ RunToxicPowderWBW(*) {
     loop {
         if stopRequested
             break
-        GameSend "{Space down}"
-        SleepChecked 1000
-        GameSend "{Space up}"
+        GameHold("Space", 1000)
         SleepChecked 750
         GameSend "{Space}"
         SleepChecked 4500
@@ -146,9 +151,7 @@ RunToxicPowderSilkbind(*) {
     loop {
         if stopRequested
             break
-        GameSend "{Space down}"
-        SleepChecked 1000
-        GameSend "{Space up}"
+        GameHold("Space", 1000)
         SleepChecked 750
         GameSend "{Space}"
         SleepChecked 4500
@@ -171,9 +174,7 @@ RunBeefTendon(*) {
     loop {
         if stopRequested
             break
-        GameSend "{Space down}"
-        SleepChecked 1000
-        GameSend "{Space up}"
+        GameHold("Space", 1000)
         SleepChecked 750
         GameSend "{Space}"
         SleepChecked 4500
@@ -185,40 +186,20 @@ RunBeefTendon(*) {
         SleepChecked 1000
         GameSend "q"
         SleepChecked 3000
-        loop 15 {
-            GameSend "s"
-            SleepChecked 20
-        }
-        loop 15 {
-            GameSend "a"
-            SleepChecked 20
-        }
-        loop 25 {
-            GameSend "w"
-            SleepChecked 20
-        }
-        loop 15 {
-            GameSend "d"
-            SleepChecked 20
-        }
+        ; --- walk to drops ---
+        GameHold("s", 500)
+        GameHold("a", 500)
+        GameHold("w", 1000)
+        GameHold("d", 500)
+        ; --- loot drops ---
         SleepChecked 200
         GameSend "f"
-        loop 15 {
-            GameSend "a"
-            SleepChecked 20
-        }
-        loop 40 {
-            GameSend "s"
-            SleepChecked 20
-        }
-        loop 15 {
-            GameSend "d"
-            SleepChecked 20
-        }
-        loop 25 {
-            GameSend "w"
-            SleepChecked 20
-        }
+        ; --- reposition for next loop ---
+        GameHold("a", 500)
+        GameHold("s", 1500)
+        GameHold("d", 500)
+        GameHold("w", 1000)
+        ; --- wait for cooldown ---
         SleepChecked 10000
     }
     StopMacro()
@@ -309,7 +290,7 @@ global features := [{ name: "Catch Fish",
     notes: "Requires: Alt+2 set to Tai Chi" }, { name: "Farm Toxic Powder (Wind Beneath Wings)",
         hotkey: "Ctrl+Alt+F",
         url: "https://www.youtube.com/watch?v=hl45VFzlvcY",
-    notes: "Requires: Toxic Powder Farm Tower, Wind Beneath Wings, Auto Recovery`nKeys: Space (Jump), Q (Mighty Drop), 1 (Dragon's Breath)" }, { name: "Farm Toxic Powder (Silkbind - Deluge)",
+        notes: "Requires: Toxic Powder Farm Tower, Wind Beneath Wings, Auto Recovery`nKeys: Space (Jump), Q (Mighty Drop), 1 (Dragon's Breath)" }, { name: "Farm Toxic Powder (Silkbind - Deluge)",
             url: "https://www.youtube.com/watch?v=hl45VFzlvcY",
             hotkey: "Ctrl+Alt+T",
             notes: "Requires: Toxic Powder Farm Tower, Silkbind - Deluge`nKeys: Space (Jump), Q (Mighty Drop), 1 (Dragon's Breath)" }, { name: "Farm Beef Tendon (unstable)",
@@ -318,16 +299,16 @@ global features := [{ name: "Catch Fish",
                 notes: "Requires: Beef Tendon Farm Tower, Silkbind - Deluge (Wind Beneath Wings not working)`nKeys: Space (Jump), Q (Mighty Drop), 1 (Dragon's Breath)" }, { name: "Gather Herb (F)",
                     hotkey: "Ctrl+Alt+G",
                     url: "",
-    notes: "Requires: Horse - Spirited Courser (call it, press F to mount)`nKeys: F (Interaction), Z (Temp Skill)" }, { name: "Gather Herb (N)",
+                    notes: "Requires: Horse - Spirited Courser (call it, press F to mount)`nKeys: F (Interaction), Z (Temp Skill)" }, { name: "Gather Herb (N)",
                         hotkey: "Ctrl+Alt+N",
                         url: "",
-    notes: "Requires: Horse - Spirited Courser + map marker placed`nKeys: N (Wayfinder), Z (Temp Skill)" }, { name: "Mine Stone",
+                        notes: "Requires: Horse - Spirited Courser + map marker placed`nKeys: N (Wayfinder), Z (Temp Skill)" }, { name: "Mine Stone",
                             hotkey: "Ctrl+Alt+M",
                             url: "",
-    notes: "Requires: Weapon - Thundercry Blade`nKeys: Q (Martial Art Skill), ``/~ (Special Skill)" }, { name: "Play Swing",
+                            notes: "Requires: Weapon - Thundercry Blade`nKeys: Q (Martial Art Skill), ``/~ (Special Skill)" }, { name: "Play Swing",
                                 hotkey: "Ctrl+Alt+P",
                                 url: "",
-    notes: "Go to Swing Play on a boat, press F to sit down first`nKeys: F (Interaction)" },
+                                notes: "Go to Swing Play on a boat, press F to sit down first`nKeys: F (Interaction)" },
 ]
 
 ; Function references in the same order as features above.
