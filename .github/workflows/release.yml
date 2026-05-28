@@ -1,0 +1,178 @@
+name: Build and Release
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-release:
+    runs-on: windows-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install Ahk2Exe and AutoHotkey v2
+        shell: pwsh
+        run: |
+          $dest = "$env:TEMP\ahk_build"
+          New-Item -ItemType Directory -Path $dest -Force | Out-Null
+
+          Write-Host "Downloading Ahk2Exe..."
+          $url1 = "https://github.com/AutoHotkey/Ahk2Exe/releases/download/Ahk2Exe1.1.37.02a2/Ahk2Exe1.1.37.02a2.zip"
+          $zip1 = "$dest\Ahk2Exe.zip"
+          Invoke-WebRequest -Uri $url1 -OutFile $zip1 -UseBasicParsing
+          Expand-Archive -Path $zip1 -DestinationPath $dest -Force
+          Write-Host "Ahk2Exe extracted."
+
+          Write-Host "Downloading AutoHotkey v2..."
+          $url2 = "https://github.com/AutoHotkey/AutoHotkey/releases/download/v2.0.19/AutoHotkey_2.0.19.zip"
+          $zip2 = "$dest\AutoHotkey_2.0.19.zip"
+          Invoke-WebRequest -Uri $url2 -OutFile $zip2 -UseBasicParsing
+          Expand-Archive -Path $zip2 -DestinationPath $dest -Force
+          Write-Host "AutoHotkey extracted."
+
+          $ahk2exe = Get-ChildItem -Recurse $dest -Filter "Ahk2Exe.exe" | Select-Object -First 1
+          $baseExe = Get-ChildItem -Recurse $dest -Filter "AutoHotkey64.exe" | Select-Object -First 1
+
+          if (-not $ahk2exe) { Write-Error "Ahk2Exe.exe not found!"; exit 1 }
+          if (-not $baseExe) { Write-Error "AutoHotkey64.exe not found!"; exit 1 }
+
+          Write-Host "Found Ahk2Exe at: $($ahk2exe.FullName)"
+          Write-Host "Found base exe at: $($baseExe.FullName)"
+          "AHK2EXE_PATH=$($ahk2exe.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append
+          "AHK_BASE_PATH=$($baseExe.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Analyze commits
+        id: analyze
+        shell: pwsh
+        env:
+          BEFORE_SHA: ${{ github.event.before || 'HEAD~1' }}
+        run: |
+          $ErrorActionPreference = 'SilentlyContinue'
+          $before = $env:BEFORE_SHA
+          $commits = git log "$before..HEAD" --pretty=format:"%s" --no-merges
+          if (-not $commits) { $commits = git log HEAD~1..HEAD --pretty=format:"%s" }
+          $ErrorActionPreference = 'Continue'
+
+          Write-Host "Commit range: $before..HEAD"
+          Write-Host "Commits found:"
+          $commits | ForEach-Object { Write-Host "  - $_" }
+
+          $bump = "skip"
+          foreach ($msg in $commits) {
+            if ($msg -match "BREAKING CHANGE|[a-z]+!:") {
+              Write-Host "  -> BREAKING CHANGE detected: $msg"
+              $bump = "major"
+              break
+            } elseif ($msg -match "^feat:" -and $bump -ne "major") {
+              Write-Host "  -> Feature detected: $msg"
+              $bump = "minor"
+            } elseif ($msg -match "^(fix|refactor|perf):" -and $bump -eq "skip") {
+              Write-Host "  -> Fix/Refactor/Perf detected: $msg"
+              $bump = "patch"
+            }
+          }
+
+          Write-Host "Highest bump: $bump"
+          "conclusion=$bump" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+
+      - name: Bump version
+        id: version
+        if: steps.analyze.outputs.conclusion != 'skip'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'SilentlyContinue'
+          $latest = (git tag --list "v*" --sort=-v:refname | Select-Object -First 1).Trim()
+          $ErrorActionPreference = 'Continue'
+
+          $bump = "$env:CONCLUSION"
+          Write-Host "Bump type: $bump"
+
+          if (-not $latest) {
+            $major = 0; $minor = 1; $patch = 0
+          } else {
+            $v = $latest -replace '^v',''
+            $parts = $v -split '\.'
+            [int]$major = $parts[0]
+            [int]$minor = if ($parts[1]) { $parts[1] } else { 0 }
+            [int]$patch = if ($parts[2]) { $parts[2] } else { 0 }
+
+            switch ($bump) {
+              "major" { $major++; $minor = 0; $patch = 0 }
+              "minor" { $minor++; $patch = 0 }
+              "patch" { $patch++ }
+            }
+          }
+
+          $newTag = "$major.$minor.$patch"
+          $tagName = "v$newTag"
+          while (git tag --list $tagName) {
+            $patch++
+            $newTag = "$major.$minor.$patch"
+            $tagName = "v$newTag"
+            Write-Host "Tag $tagName already exists, bumping patch..."
+          }
+
+          Write-Host "Previous tag: $latest"
+          Write-Host "New tag version: $newTag"
+          "tag=$newTag" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+        env:
+          CONCLUSION: ${{ steps.analyze.outputs.conclusion }}
+
+      - name: Compile .ahk to .exe
+        shell: pwsh
+        run: |
+          $ahk2exe = $env:AHK2EXE_PATH
+          $baseExe = $env:AHK_BASE_PATH
+
+          if (-not (Test-Path $baseExe)) {
+            $compilerDir = Split-Path $ahk2exe -Parent
+            $baseExe = Join-Path (Split-Path $compilerDir -Parent) "AutoHotkey64.exe"
+            if (-not (Test-Path $baseExe)) {
+              $altPaths = @(
+                "C:\Program Files\AutoHotkey\v2\AutoHotkey64.exe",
+                "C:\Program Files\AutoHotkey\AutoHotkey64.exe",
+                "C:\Program Files (x86)\AutoHotkey\AutoHotkey64.exe"
+              )
+              foreach ($p in $altPaths) {
+                if (Test-Path $p) { $baseExe = $p; break }
+              }
+            }
+          }
+
+          if (Test-Path $baseExe) {
+            Write-Host "Using base exe: $baseExe"
+            Start-Process -FilePath $ahk2exe -ArgumentList @("/in", "WhereWindsMeetAuto.ahk", "/out", "WhereWindsMeetAuto.exe", "/base", $baseExe) -Wait -NoNewWindow
+          } else {
+            Write-Host "Base exe not found, using default"
+            Start-Process -FilePath $ahk2exe -ArgumentList @("/in", "WhereWindsMeetAuto.ahk", "/out", "WhereWindsMeetAuto.exe") -Wait -NoNewWindow
+          }
+
+          if (-not (Test-Path "WhereWindsMeetAuto.exe")) {
+            Write-Error "Compilation failed! Output .exe not found."
+            exit 1
+          }
+          Write-Host "Compiled successfully."
+
+      - name: Create GitHub Release
+        if: steps.analyze.outputs.conclusion != 'skip'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.version.outputs.tag }}
+          name: "${{ steps.version.outputs.tag }}"
+          body: |
+            Automated release for `${{ steps.version.outputs.tag }}`.
+            - Compiled from `WhereWindsMeetAuto.ahk` using Ahk2Exe (AutoHotkey v2)
+          draft: false
+          prerelease: false
+          files: |
+            WhereWindsMeetAuto.exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
