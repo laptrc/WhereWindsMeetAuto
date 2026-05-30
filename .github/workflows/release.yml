@@ -18,70 +18,83 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Install Ahk2Exe and AutoHotkey v2
-        shell: pwsh
-        run: |
-          $dest = "$env:TEMP\ahk_build"
-          New-Item -ItemType Directory -Path $dest -Force | Out-Null
-
-          Write-Host "Downloading Ahk2Exe..."
-          $url1 = "https://github.com/AutoHotkey/Ahk2Exe/releases/download/Ahk2Exe1.1.37.02a2/Ahk2Exe1.1.37.02a2.zip"
-          $zip1 = "$dest\Ahk2Exe.zip"
-          Invoke-WebRequest -Uri $url1 -OutFile $zip1 -UseBasicParsing
-          Expand-Archive -Path $zip1 -DestinationPath $dest -Force
-          Write-Host "Ahk2Exe extracted."
-
-          Write-Host "Downloading AutoHotkey v2..."
-          $url2 = "https://github.com/AutoHotkey/AutoHotkey/releases/download/v2.0.19/AutoHotkey_2.0.19.zip"
-          $zip2 = "$dest\AutoHotkey_2.0.19.zip"
-          Invoke-WebRequest -Uri $url2 -OutFile $zip2 -UseBasicParsing
-          Expand-Archive -Path $zip2 -DestinationPath $dest -Force
-          Write-Host "AutoHotkey extracted."
-
-          $ahk2exe = Get-ChildItem -Recurse $dest -Filter "Ahk2Exe.exe" | Select-Object -First 1
-          $baseExe = Get-ChildItem -Recurse $dest -Filter "AutoHotkey64.exe" | Select-Object -First 1
-
-          if (-not $ahk2exe) { Write-Error "Ahk2Exe.exe not found!"; exit 1 }
-          if (-not $baseExe) { Write-Error "AutoHotkey64.exe not found!"; exit 1 }
-
-          Write-Host "Found Ahk2Exe at: $($ahk2exe.FullName)"
-          Write-Host "Found base exe at: $($baseExe.FullName)"
-          "AHK2EXE_PATH=$($ahk2exe.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append
-          "AHK_BASE_PATH=$($baseExe.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append
-
       - name: Analyze commits
         id: analyze
         shell: pwsh
-        env:
-          BEFORE_SHA: ${{ github.event.before || 'HEAD~1' }}
         run: |
           $ErrorActionPreference = 'SilentlyContinue'
-          $before = $env:BEFORE_SHA
-          $commits = git log "$before..HEAD" --pretty=format:"%s" --no-merges
+          $lastTag = (git tag --list "v*" --sort=-v:refname | Select-Object -First 1).Trim()
+
+          $commitRange = if ($lastTag) { "$lastTag..HEAD" } else { "HEAD" }
+
+          $commits = git log $commitRange --pretty=format:"%s" --no-merges
           if (-not $commits) { $commits = git log HEAD~1..HEAD --pretty=format:"%s" }
           $ErrorActionPreference = 'Continue'
 
-          Write-Host "Commit range: $before..HEAD"
+          Write-Host "Commit range: $commitRange"
           Write-Host "Commits found:"
           $commits | ForEach-Object { Write-Host "  - $_" }
 
           $bump = "skip"
           foreach ($msg in $commits) {
-            if ($msg -match "BREAKING CHANGE|[a-z]+!:") {
+            if ($msg -match "BREAKING CHANGE|^[a-z]+(\([^)]+\))?!:") {
               Write-Host "  -> BREAKING CHANGE detected: $msg"
               $bump = "major"
               break
-            } elseif ($msg -match "^feat:" -and $bump -ne "major") {
+            } elseif ($msg -match "^feat(\([^)]+\))?:" -and $bump -ne "major") {
               Write-Host "  -> Feature detected: $msg"
               $bump = "minor"
-            } elseif ($msg -match "^(fix|refactor|perf):" -and $bump -eq "skip") {
-              Write-Host "  -> Fix/Refactor/Perf detected: $msg"
+            } elseif ($msg -match "^(fix|refactor|perf)(\([^)]+\))?:" -and $bump -eq "skip") {
+              Write-Host "  -> Fix/Refactor/Perf/etc detected: $msg"
               $bump = "patch"
             }
           }
 
           Write-Host "Highest bump: $bump"
           "conclusion=$bump" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+
+          # Group commits by conventional commit type
+          $features = @()
+          $fixes = @()
+          $others = @()
+
+          foreach ($msg in $commits) {
+            if ($msg -match "^(?<type>\w+)(?:\([^)]+\))?!?:\s*(?<subject>.+)$") {
+              $type = $matches['type']
+              $subject = $matches['subject']
+              switch ($type) {
+                "feat" { $features += $subject }
+                "fix"  { $fixes += $subject }
+                default { $others += $subject }
+              }
+            } else {
+              $others += $msg
+            }
+          }
+
+          $md = ""
+          if ($features.Count -gt 0) {
+            $md += "#### Features`n"
+            $features | ForEach-Object { $md += "- $_`n" }
+            $md += "`n"
+          }
+          if ($fixes.Count -gt 0) {
+            $md += "#### Fixes`n"
+            $fixes | ForEach-Object { $md += "- $_`n" }
+            $md += "`n"
+          }
+          if ($others.Count -gt 0) {
+            $md += "#### Other Changes`n"
+            $others | ForEach-Object { $md += "- $_`n" }
+            $md += "`n"
+          }
+          if (-not $md) {
+            $md = "*No new commits.*"
+          }
+
+          "commits<<EOF" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          $md.Trim() | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          "EOF" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
 
       - name: Bump version
         id: version
@@ -126,7 +139,40 @@ jobs:
         env:
           CONCLUSION: ${{ steps.analyze.outputs.conclusion }}
 
+      - name: Install Ahk2Exe and AutoHotkey v2
+        if: steps.analyze.outputs.conclusion != 'skip'
+        shell: pwsh
+        run: |
+          $dest = "$env:TEMP\ahk_build"
+          New-Item -ItemType Directory -Path $dest -Force | Out-Null
+
+          Write-Host "Downloading Ahk2Exe..."
+          $url1 = "https://github.com/AutoHotkey/Ahk2Exe/releases/download/Ahk2Exe1.1.37.02a2/Ahk2Exe1.1.37.02a2.zip"
+          $zip1 = "$dest\Ahk2Exe.zip"
+          Invoke-WebRequest -Uri $url1 -OutFile $zip1 -UseBasicParsing
+          Expand-Archive -Path $zip1 -DestinationPath $dest -Force
+          Write-Host "Ahk2Exe extracted."
+
+          Write-Host "Downloading AutoHotkey v2..."
+          $url2 = "https://github.com/AutoHotkey/AutoHotkey/releases/download/v2.0.19/AutoHotkey_2.0.19.zip"
+          $zip2 = "$dest\AutoHotkey_2.0.19.zip"
+          Invoke-WebRequest -Uri $url2 -OutFile $zip2 -UseBasicParsing
+          Expand-Archive -Path $zip2 -DestinationPath $dest -Force
+          Write-Host "AutoHotkey extracted."
+
+          $ahk2exe = Get-ChildItem -Recurse $dest -Filter "Ahk2Exe.exe" | Select-Object -First 1
+          $baseExe = Get-ChildItem -Recurse $dest -Filter "AutoHotkey64.exe" | Select-Object -First 1
+
+          if (-not $ahk2exe) { Write-Error "Ahk2Exe.exe not found!"; exit 1 }
+          if (-not $baseExe) { Write-Error "AutoHotkey64.exe not found!"; exit 1 }
+
+          Write-Host "Found Ahk2Exe at: $($ahk2exe.FullName)"
+          Write-Host "Found base exe at: $($baseExe.FullName)"
+          "AHK2EXE_PATH=$($ahk2exe.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append
+          "AHK_BASE_PATH=$($baseExe.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append
+
       - name: Compile .ahk to .exe
+        if: steps.analyze.outputs.conclusion != 'skip'
         shell: pwsh
         run: |
           $ahk2exe = $env:AHK2EXE_PATH
@@ -168,8 +214,12 @@ jobs:
           tag_name: v${{ steps.version.outputs.tag }}
           name: "${{ steps.version.outputs.tag }}"
           body: |
-            Automated release for `${{ steps.version.outputs.tag }}`.
-            - Compiled from `WhereWindsMeetAuto.ahk` using Ahk2Exe (AutoHotkey v2)
+            ## WhereWindsMeetAuto ${{ steps.version.outputs.tag }}
+            `WhereWindsMeetAuto.exe` compiled from `WhereWindsMeetAuto.ahk` using Ahk2Exe (AutoHotkey v2).
+
+            ### What's Changed
+
+            ${{ steps.analyze.outputs.commits }}
           draft: false
           prerelease: false
           files: |
