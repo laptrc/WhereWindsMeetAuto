@@ -1,0 +1,11 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "agent": {
+    "plan": {
+      "model": "ollama-cloud/glm-5.1"
+    },
+    "build": {
+      "model": "ollama-cloud/qwen3.5:397b"
+    }
+  }
+}

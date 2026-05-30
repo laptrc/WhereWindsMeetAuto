@@ -1,0 +1,26 @@
+{
+  "skill_name": "add-macro",
+  "evals": [
+    {
+      "id": 0,
+      "eval_name": "simple-two-key-macro",
+      "prompt": "Add a new macro for collecting wood. It should press V to interact, wait 300ms, then press Z to use the temporary skill. Call it 'Collect Wood' and use hotkey Ctrl+Alt+V. Requires: Wooden Axe weapon.",
+      "expected_output": "New macro function RunCollectWood added to WhereWindsMeetAuto.ahk with the V-Z key sequence, hotkey binding ^!v::, entry in features array, entry in macroFuncs array, and README.md Features table updated.",
+      "files": ["WhereWindsMeetAuto.ahk", "README.md"]
+    },
+    {
+      "id": 1,
+      "eval_name": "complex-movement-macro",
+      "prompt": "I need a macro to farm clay deposits. The sequence is: press Q for martial art (200ms wait), hold W to walk forward for 800ms, press F to interact (500ms wait), hold S to walk back for 800ms, then wait 5 seconds for cooldown. Name it 'Farm Clay', suggest an available hotkey, and add it to the README. Requires: Clay Pick tool equipped.",
+      "expected_output": "New macro function with GameHold for movement, proper SleepChecked calls, hotkey suggested from unused combos, all five places updated in the codebase.",
+      "files": ["WhereWindsMeetAuto.ahk", "README.md"]
+    },
+    {
+      "id": 2,
+      "eval_name": "macro-with-youtube-guide",
+      "prompt": "Add a macro for farming Iron Ore using the spinning attack. Keys: hold Space for 1500ms (jump), release, wait 2 seconds, press E for special attack, wait 3 seconds, repeat. There's a YouTube guide at https://www.youtube.com/watch?v=example123. Name it 'Farm Iron Ore' and suggest a hotkey. Requires: Iron Mining Pick, Auto Recovery skill.",
+      "expected_output": "Macro with jump sequence using GameHold, YouTube URL included in features array, all five places updated correctly.",
+      "files": ["WhereWindsMeetAuto.ahk", "README.md"]
+    }
+  ]
+}
