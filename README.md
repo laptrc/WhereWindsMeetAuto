@@ -10,16 +10,17 @@ AutoHotkey v2 automation script for _Where Winds Meet_ with a GUI launcher and h
 
 ## Features
 
-| Macro                                  | Hotkey     | Requires                                                   |
-| -------------------------------------- | ---------- | ---------------------------------------------------------- |
-| Catch Fish                             | Ctrl+Alt+C | Alt+2 set to Tai Chi                                       |
-| Farm Toxic Powder (Wind Beneath Wings) | Ctrl+Alt+F | Toxic Powder Farm Tower, Wind Beneath Wings, Auto Recovery |
-| Farm Toxic Powder (Silkbind - Deluge)  | Ctrl+Alt+T | Toxic Powder Farm Tower, Silkbind - Deluge                 |
-| Farm Beef Tendon (unstable)            | Ctrl+Alt+B | Beef Tendon Farm Tower, Silkbind - Deluge                  |
-| Gather Herb (F)                        | Ctrl+Alt+G | Horse — Spirited Courser (call it, press F to mount)       |
-| Gather Herb (N)                        | Ctrl+Alt+N | Horse — Spirited Courser + map marker placed               |
-| Mine Stone                             | Ctrl+Alt+M | Weapon — Thundercry Blade                                  |
-| Play Swing                             | Ctrl+Alt+P | Sit on a boat swing first                                  |
+| Macro                                     | Hotkey     | Requires                                                   |
+| ----------------------------------------- | ---------- | ---------------------------------------------------------- |
+| Catch Fish                                | Ctrl+Alt+C | Alt+2 set to Tai Chi                                       |
+| ⭐ Farm Toxic Powder (Wind Beneath Wings) | Ctrl+Alt+W | Toxic Powder Farm Tower, Wind Beneath Wings, Auto Recovery |
+| Farm Toxic Powder (Silkbind - Deluge)     | Ctrl+Alt+S | Toxic Powder Farm Tower, Silkbind - Deluge                 |
+| ⚠️ Farm Beef Tendon                       | Ctrl+Alt+B | Beef Tendon Farm Tower, Silkbind - Deluge                  |
+| Gather Herb (F)                           | Ctrl+Alt+F | Horse — Spirited Courser (call it, press F to mount)       |
+| Gather Herb (N)                           | Ctrl+Alt+N | Horse — Spirited Courser, map marker placed                |
+| ⭐ Gather Herb (Fleethoof)                | Ctrl+Alt+6 | Horse — Fleethoof, 1 set to Spirit Gift - Gather           |
+| Mine Stone                                | Ctrl+Alt+M | Weapon — Thundercry Blade                                  |
+| Play Swing                                | Ctrl+Alt+P | Sit on a boat swing first                                  |
 
 ---
 
@@ -51,7 +52,7 @@ AutoHotkey v2 automation script for _Where Winds Meet_ with a GUI launcher and h
 
 ---
 
-## Farm Beef Tendon (unstable)
+## ⚠️ Farm Beef Tendon
 
 > ⚠️ Enemy respawn position changes between sessions, so movement timings
 > usually need tweaking after each login.

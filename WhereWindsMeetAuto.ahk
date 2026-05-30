@@ -239,6 +239,21 @@ RunGatherHerbN(*) {
     StopMacro()
 }
 
+RunGatherHerbFleethoof(*) {
+    global stopRequested
+    if !StartMacro("Gather Herb (Fleethoof)")
+        return
+    loop {
+        if stopRequested
+            break
+        GameSend "6"
+        SleepChecked 200
+        GameSend "1"
+        SleepChecked 200
+    }
+    StopMacro()
+}
+
 RunMineStone(*) {
     global stopRequested
     if !StartMacro("Mine Stone")
@@ -272,11 +287,12 @@ RunPlaySwing(*) {
 ; =============================================================================
 
 ^!c:: RunCatchFish()            ; Ctrl+Alt+C — Catch Fish
-^!f:: RunToxicPowderWBW()      ; Ctrl+Alt+F — Farm Toxic Powder (Wind Beneath Wings)
-^!t:: RunToxicPowderSilkbind() ; Ctrl+Alt+T — Farm Toxic Powder (Silkbind - Deluge)
+^!w:: RunToxicPowderWBW()      ; Ctrl+Alt+W — Farm Toxic Powder (Wind Beneath Wings)
+^!s:: RunToxicPowderSilkbind() ; Ctrl+Alt+S — Farm Toxic Powder (Silkbind - Deluge)
 ^!b:: RunBeefTendon()          ; Ctrl+Alt+B — Farm Beef Tendon
-^!g:: RunGatherHerbF() ; Ctrl+Alt+G — Gather Herb (F)
+^!f:: RunGatherHerbF() ; Ctrl+Alt+F — Gather Herb (F)
 ^!n:: RunGatherHerbN() ; Ctrl+Alt+N — Gather Herb (N)
+^!6:: RunGatherHerbFleethoof() ; Ctrl+Alt+6 — Gather Herb (Fleethoof)
 ^!m:: RunMineStone()   ; Ctrl+Alt+M — Mine Stone
 ^!p:: RunPlaySwing()   ; Ctrl+Alt+P — Play Swing
 
@@ -287,33 +303,36 @@ RunPlaySwing(*) {
 global features := [{ name: "Catch Fish",
     hotkey: "Ctrl+Alt+C",
     url: "",
-    notes: "Requires: Alt+2 set to Tai Chi" }, { name: "Farm Toxic Powder (Wind Beneath Wings)",
-        hotkey: "Ctrl+Alt+F",
+    notes: "Requires: Alt+2 set to Tai Chi" }, { name: "★ Farm Toxic Powder (Wind Beneath Wings)",
+        hotkey: "Ctrl+Alt+W",
         url: "https://www.youtube.com/watch?v=hl45VFzlvcY",
         notes: "Requires: Toxic Powder Farm Tower, Wind Beneath Wings, Auto Recovery`nKeys: Space (Jump), Q (Mighty Drop), 1 (Dragon's Breath)" }, { name: "Farm Toxic Powder (Silkbind - Deluge)",
             url: "https://www.youtube.com/watch?v=hl45VFzlvcY",
-            hotkey: "Ctrl+Alt+T",
-            notes: "Requires: Toxic Powder Farm Tower, Silkbind - Deluge`nKeys: Space (Jump), Q (Mighty Drop), 1 (Dragon's Breath)" }, { name: "Farm Beef Tendon (unstable)",
+            hotkey: "Ctrl+Alt+S",
+            notes: "Requires: Toxic Powder Farm Tower, Silkbind - Deluge`nKeys: Space (Jump), Q (Mighty Drop), 1 (Dragon's Breath)" }, { name: "⚠️ Farm Beef Tendon",
                 url: "https://www.youtube.com/watch?v=QqNRHs7eag0",
                 hotkey: "Ctrl+Alt+B",
                 notes: "Requires: Beef Tendon Farm Tower, Silkbind - Deluge (Wind Beneath Wings not working)`nKeys: Space (Jump), Q (Mighty Drop), 1 (Dragon's Breath)" }, { name: "Gather Herb (F)",
-                    hotkey: "Ctrl+Alt+G",
+                    hotkey: "Ctrl+Alt+F",
                     url: "",
                     notes: "Requires: Horse - Spirited Courser (call it, press F to mount)`nKeys: F (Interaction), Z (Temp Skill)" }, { name: "Gather Herb (N)",
                         hotkey: "Ctrl+Alt+N",
                         url: "",
-                        notes: "Requires: Horse - Spirited Courser + map marker placed`nKeys: N (Wayfinder), Z (Temp Skill)" }, { name: "Mine Stone",
-                            hotkey: "Ctrl+Alt+M",
+                        notes: "Requires: Horse - Spirited Courser, map marker placed`nKeys: N (Wayfinder), Z (Temp Skill)" }, { name: "★ Gather Herb (Fleethoof)",
+                            hotkey: "Ctrl+Alt+6",
                             url: "",
-                            notes: "Requires: Weapon - Thundercry Blade`nKeys: Q (Martial Art Skill), ``/~ (Special Skill)" }, { name: "Play Swing",
-                                hotkey: "Ctrl+Alt+P",
+                            notes: "Requires: Horse - Fleethoof, 1 set to Spirit Gift - Gather`nKeys: 6 (Call Horse), 1 (Spirit Gift Skill)" }, { name: "Mine Stone",
+                                hotkey: "Ctrl+Alt+M",
                                 url: "",
-                                notes: "Go to Swing Play on a boat, press F to sit down first`nKeys: F (Interaction)" },
+                                notes: "Requires: Weapon - Thundercry Blade`nKeys: Q (Martial Art Skill), ``/~ (Special Skill)" }, { name: "Play Swing",
+                                    hotkey: "Ctrl+Alt+P",
+                                    url: "",
+                                    notes: "Go to Swing Play on a boat, press F to sit down first`nKeys: F (Interaction)" },
 ]
 
 ; Function references in the same order as features above.
 global macroFuncs := [RunCatchFish, RunToxicPowderWBW, RunToxicPowderSilkbind, RunBeefTendon, RunGatherHerbF,
-    RunGatherHerbN, RunMineStone, RunPlaySwing]
+    RunGatherHerbN, RunGatherHerbFleethoof, RunMineStone, RunPlaySwing]
 
 AppGui := Gui("-Resize", GAME_TITLE " Auto")
 
