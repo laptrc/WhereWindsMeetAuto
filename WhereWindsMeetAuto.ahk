@@ -189,16 +189,16 @@ RunBeefTendon(*) {
         ; --- walk to drops ---
         GameHold("s", 500)
         GameHold("a", 500)
-        GameHold("w", 1000)
-        GameHold("d", 500)
+        GameHold("w", 1250)
+        GameHold("d", 750)
         ; --- loot drops ---
         SleepChecked 200
         GameSend "f"
         ; --- reposition for next loop ---
-        GameHold("a", 500)
+        GameHold("a", 750)
         GameHold("s", 1500)
         GameHold("d", 500)
-        GameHold("w", 1000)
+        GameHold("w", 1250)
         ; --- wait for cooldown ---
         SleepChecked 10000
     }
