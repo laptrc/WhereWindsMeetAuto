@@ -23,8 +23,10 @@ global stopRequested := false
 
 ; Hotkey handler registered while a macro is running.
 ; Uses a named function (not a closure) to avoid by-ref capture issues.
-RequestStop(*) {
-    global stopRequested
+StopMacroRequest(ignoreFocus := false) {
+    global stopRequested, GAME_TITLE
+    if ignoreFocus !== true && !WinActive(GAME_TITLE)
+        return
     stopRequested := true
 }
 
@@ -37,7 +39,7 @@ StartMacro(name) {
         return false
     activeMacro := name
     stopRequested := false
-    Hotkey "Esc", RequestStop, "On"
+    Hotkey "Esc", StopMacroRequest, "On"
     return true
 }
 
@@ -386,10 +388,10 @@ rowY += 10
 
 ; --- Stop button + hint ---
 AppGui.SetFont("s9 Norm", "Segoe UI")
-stopBtn := AppGui.Add("Button", "x12 y" rowY " w90 h26", "Stop  (Esc)")
-stopBtn.OnEvent("Click", (*) => Send("{Esc}"))
+stopBtn := AppGui.Add("Button", "x12 y" rowY " w90 h26", "Stop")
+stopBtn.OnEvent("Click", (*) => StopMacroRequest(true))
 AppGui.SetFont("s8 Norm", "Segoe UI")
-AppGui.Add("Text", "x112 y" (rowY + 6) " w380", "Press Esc anytime to stop the active macro")
+AppGui.Add("Text", "x112 y" (rowY + 6) " w380", "Esc stops macro only when game is focused.")
 
 AppGui.Show("w500")
 
