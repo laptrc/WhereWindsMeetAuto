@@ -4,7 +4,7 @@ AutoHotkey v2 automation script for _Where Winds Meet_ with a GUI launcher and h
 
 [![AutoHotkey v2](https://img.shields.io/badge/AutoHotkey-v2-blue)](https://www.autohotkey.com/)
 
-![Where Winds Meet Auto GUI](images/WhereWindsMeetAuto.png)
+![Where Winds Meet Auto GUI](assets/WhereWindsMeetAuto.png)
 
 ---
 
@@ -43,6 +43,7 @@ AutoHotkey v2 automation script for _Where Winds Meet_ with a GUI launcher and h
 - **Administrator required** — Both the `.exe` and `.ahk` must be run as administrator.
 - **Auto-focus** — Clicking **Start** will automatically bring the game window into focus.
 - **One macro at a time** — Only one macro can run at a time. Press **Esc** to stop the active macro before starting a new one.
+- **Monthly Pass popup auto-dismiss** — While any macro is active, the script sends `Space` once during `04:01 Asia/Ho_Chi_Minh (UTC+7)` to close the Monthly Pass popup.
 
 ---
 
@@ -79,13 +80,13 @@ You may still experiment with Macro Recorder if you prefer a visual
 workflow, but for reliable movement timing AutoHotkey is strongly
 recommended. See the image below for where to update your key timings/repetitions.
 
-![Farm Beef Tendon Macro Recorder](images/FarmBeefTendonMacroRecorder.png)
+![Farm Beef Tendon Macro Recorder](assets/FarmBeefTendonMacroRecorder.png)
 
 ### Tower Layout
 
 Build the tower like below so the character cannot walk outside:
 
-![Beef Tendon Farm Tower](images/BeefTendonFarmTower.jpg)
+![Beef Tendon Farm Tower](assets/BeefTendonFarmTower.jpg)
 
 ---
 

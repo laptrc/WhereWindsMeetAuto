@@ -392,6 +392,8 @@ stopBtn := AppGui.Add("Button", "x12 y" rowY " w90 h26", "Stop")
 stopBtn.OnEvent("Click", (*) => StopMacroRequest(true))
 AppGui.SetFont("s8 Norm", "Segoe UI")
 AppGui.Add("Text", "x112 y" (rowY + 6) " w380", "Esc stops macro only when game is focused.")
+rowY += 34
+AppGui.Add("Text", "x12 y" rowY " w480", "Note: while any macro is active, the script sends Space once during 04:01 Asia/Ho_Chi_Minh (UTC+7) to close the Monthly Pass popup.")
 
 AppGui.Show("w500")
 
@@ -411,4 +413,15 @@ UpdateUI() {
     activeLabel.Text := (activeMacro != "") ? activeMacro : "None"
 }
 
+AutoDismissMonthlyPassPopup() {
+    global activeMacro
+    if activeMacro = ""
+        return
+    ; Asia/Ho_Chi_Minh is fixed at UTC+7, so derive the target time from UTC.
+    if FormatTime(DateAdd(A_NowUTC, 7, "Hours"), "HHmm") != "0401"
+        return
+    GameSend "{Space}"
+}
+
 SetTimer UpdateUI, 200
+SetTimer AutoDismissMonthlyPassPopup, 60000

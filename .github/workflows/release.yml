@@ -195,10 +195,10 @@ jobs:
 
           if (Test-Path $baseExe) {
             Write-Host "Using base exe: $baseExe"
-            Start-Process -FilePath $ahk2exe -ArgumentList @("/in", "WhereWindsMeetAuto.ahk", "/out", "WhereWindsMeetAuto.exe", "/base", $baseExe) -Wait -NoNewWindow
+            Start-Process -FilePath $ahk2exe -ArgumentList @("/in", "WhereWindsMeetAuto.ahk", "/out", "WhereWindsMeetAuto.exe", "/icon", "assets/logo.ico", "/base", $baseExe) -Wait -NoNewWindow
           } else {
             Write-Host "Base exe not found, using default"
-            Start-Process -FilePath $ahk2exe -ArgumentList @("/in", "WhereWindsMeetAuto.ahk", "/out", "WhereWindsMeetAuto.exe") -Wait -NoNewWindow
+            Start-Process -FilePath $ahk2exe -ArgumentList @("/in", "WhereWindsMeetAuto.ahk", "/out", "WhereWindsMeetAuto.exe", "/icon", "assets/logo.ico") -Wait -NoNewWindow
           }
 
           if (-not (Test-Path "WhereWindsMeetAuto.exe")) {
