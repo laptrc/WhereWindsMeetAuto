@@ -2,6 +2,14 @@
 
 SetTitleMatchMode 3   ; exact title match — GAME_TITLE must match precisely
 
+if A_IsCompiled {
+    TraySetIcon A_ScriptFullPath, , true
+} else {
+    iconPath := A_ScriptDir "\assets\logo.ico"
+    if FileExist(iconPath)
+        TraySetIcon iconPath, , true
+}
+
 ; =============================================================================
 ; Global State
 ; =============================================================================
