@@ -2,10 +2,10 @@
   "$schema": "https://opencode.ai/config.json",
   "agent": {
     "plan": {
-      "model": "ollama-cloud/glm-5.1"
+      "model": "github-copilot/gpt-5.4"
     },
     "build": {
-      "model": "ollama-cloud/qwen3.5:397b"
+      "model": "github-copilot/gpt-5.3-codex"
     }
   }
 }

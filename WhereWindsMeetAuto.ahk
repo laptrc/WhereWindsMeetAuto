@@ -25,6 +25,41 @@ global activeMacro := ""
 ; Reset to false at the start of each macro run.
 global stopRequested := false
 
+; AutoCode configuration and state (redeem gift codes)
+global AUTO_CODE_CONFIG := A_ScriptDir "\WWM_AutoCode.ini"
+global AUTO_CODE_ACTION_DELAY := 500
+global AUTO_CODE_LINE_DELAY := 500
+global AUTO_CODE_COLOR_TOLERANCE := 30
+global AUTO_CODE_COLOR_INITIAL_WAIT := 350
+global AUTO_CODE_COLOR_CHECK_TIMEOUT := 1200
+global AUTO_CODE_COLOR_CHECK_INTERVAL := 100
+
+global autoCodeP1X := 0
+global autoCodeP1Y := 0
+global autoCodeP1Color := 0
+global autoCodeP1Set := false
+global autoCodeP2X := 0
+global autoCodeP2Y := 0
+global autoCodeP2Set := false
+global autoCodeP3X := 0
+global autoCodeP3Y := 0
+global autoCodeP3Set := false
+
+global autoCodeGui := 0
+global autoCodeGuiVisible := false
+global autoCodeCodeBox := 0
+global autoCodeProfileSelect := 0
+global autoCodeDelayEdit := 0
+global autoCodeLineDelayEdit := 0
+global autoCodeP1Text := 0
+global autoCodeP2Text := 0
+global autoCodeP3Text := 0
+global autoCodeProfiles := []
+global autoCodeCurrentProfile := ""
+global autoCodeProfileSyncing := false
+
+AutoCodeLoadSettings()
+
 ; =============================================================================
 ; Helper Functions
 ; =============================================================================
@@ -32,8 +67,8 @@ global stopRequested := false
 ; Hotkey handler registered while a macro is running.
 ; Uses a named function (not a closure) to avoid by-ref capture issues.
 StopMacroRequest(ignoreFocus := false) {
-    global stopRequested, GAME_TITLE
-    if ignoreFocus !== true && !WinActive(GAME_TITLE)
+    global stopRequested, GAME_TITLE, activeMacro
+    if ignoreFocus !== true && activeMacro != "Redeem Gift Codes" && !WinActive(GAME_TITLE)
         return
     stopRequested := true
 }
@@ -103,8 +138,8 @@ GameHold(key, ms) {
 }
 
 ; Factory that captures fn at call time so each button gets its own closure.
-MakeStartHandler(fn) {
-    return (*) => (FocusGame() && fn())
+MakeStartHandler(fn, shouldFocusGame := true) {
+    return shouldFocusGame ? ((*) => (FocusGame() && fn())) : ((*) => fn())
 }
 
 OpenLink(ctrl, id, href) {
@@ -292,6 +327,10 @@ RunPlaySwing(*) {
     StopMacro()
 }
 
+RunAutoCode(*) {
+    AutoCodeShowGui()
+}
+
 ; =============================================================================
 ; Hotkeys
 ; =============================================================================
@@ -338,11 +377,16 @@ global features := [{ name: "Catch Fish",
                                     hotkey: "Ctrl+Alt+P",
                                     url: "",
                                     notes: "Go to Swing Play on a boat, press F to sit down first`nKeys: F (Interaction)" },
+{ name: "Redeem Gift Codes",
+    hotkey: "F1/F2/F3/F5",
+    url: "https://www.youtube.com/watch?v=EMZKfgAHP5k",
+    focusGame: false,
+    notes: "Set P1/P2/P3 in sub window, then press F5 or Start`nKeys: F1/F2/F3 (Set Points), F5 (Start), Esc (Stop while running)" },
 ]
 
 ; Function references in the same order as features above.
 global macroFuncs := [RunCatchFish, RunToxicPowderWBW, RunToxicPowderSilkbind, RunBeefTendon, RunGatherHerbF,
-    RunGatherHerbN, RunGatherHerbFleethoof, RunMineStone, RunPlaySwing]
+    RunGatherHerbN, RunGatherHerbFleethoof, RunMineStone, RunPlaySwing, RunAutoCode]
 
 AppGui := Gui("-Resize", GAME_TITLE " Auto")
 
@@ -372,7 +416,7 @@ for i, feat in features {
     AppGui.SetFont("s10 Norm", "Segoe UI")
     AppGui.Add("Text", "x314 y" rowY " w90 h22", feat.hotkey)
     btn := AppGui.Add("Button", "x412 y" (rowY - 1) " w80 h24", "Start")
-    btn.OnEvent("Click", MakeStartHandler(fn))
+    btn.OnEvent("Click", MakeStartHandler(fn, feat.HasProp("focusGame") ? feat.focusGame : true))
     rowY += 24
 
     ; Notes (secondary, indented)
@@ -399,7 +443,7 @@ AppGui.SetFont("s9 Norm", "Segoe UI")
 stopBtn := AppGui.Add("Button", "x12 y" rowY " w90 h26", "Stop")
 stopBtn.OnEvent("Click", (*) => StopMacroRequest(true))
 AppGui.SetFont("s8 Norm", "Segoe UI")
-AppGui.Add("Text", "x112 y" (rowY + 6) " w380", "Esc stops macro only when game is focused.")
+AppGui.Add("Text", "x112 y" (rowY + 6) " w380", "Esc stops macro when game is focused (or during Redeem Gift Codes).")
 rowY += 34
 AppGui.Add("Text", "x12 y" rowY " w480", "Note: while any macro is active, the script sends Space once during 04:01 Asia/Ho_Chi_Minh (UTC+7) to close the Monthly Pass popup.")
 
@@ -433,3 +477,684 @@ AutoDismissMonthlyPassPopup() {
 
 SetTimer UpdateUI, 200
 SetTimer AutoDismissMonthlyPassPopup, 60000
+
+AutoCodeShowGui() {
+    global autoCodeGui, autoCodeGuiVisible
+    if !IsObject(autoCodeGui)
+        AutoCodeCreateGui()
+    AutoCodeRefreshProfileOptions()
+    AutoCodeRefreshPointLabels()
+    autoCodeGui.Show("w320 h420")
+    autoCodeGuiVisible := true
+}
+
+AutoCodeCreateGui() {
+    global autoCodeGui, autoCodeCodeBox, autoCodeProfileSelect, autoCodeDelayEdit, autoCodeLineDelayEdit
+    global autoCodeP1Text, autoCodeP2Text, autoCodeP3Text
+
+    autoCodeGui := Gui("", "WWM Auto Code")
+    autoCodeGui.SetFont("s8 Bold", "Segoe UI")
+    autoCodeGui.AddText("x10 y8 w300 Center", "WHERE WINDS MEET - AUTO CODE")
+    autoCodeGui.SetFont("s8 Norm", "Segoe UI")
+
+    autoCodeGui.AddText("x10 y30 w300", "Profile (by resolution):")
+    autoCodeProfileSelect := autoCodeGui.AddDropDownList("x10 y46 w200", [])
+    autoCodeProfileSelect.OnEvent("Change", AutoCodeOnProfileChanged)
+    btnUseCurrent := autoCodeGui.AddButton("x215 y45 w95 h24", "Use Current")
+    btnUseCurrent.OnEvent("Click", (*) => AutoCodeUseCurrentResolutionProfile())
+
+    autoCodeGui.AddText("x10 y78 w300", "Code List - One code per line:")
+    autoCodeCodeBox := autoCodeGui.AddEdit("x10 y96 w300 h105 Multi VScroll")
+
+    autoCodeGui.AddText("x10 y218 w25", "P1:")
+    autoCodeP1Text := autoCodeGui.AddText("x38 y218 w145", AutoCodePointText(1))
+    btnP1 := autoCodeGui.AddButton("x205 y212 w105 h26", "SET (F1)")
+    btnP1.OnEvent("Click", (*) => AutoCodeSetPointFromButton(1))
+
+    autoCodeGui.AddText("x10 y250 w25", "P2:")
+    autoCodeP2Text := autoCodeGui.AddText("x38 y250 w145", AutoCodePointText(2))
+    btnP2 := autoCodeGui.AddButton("x205 y244 w105 h26", "SET (F2)")
+    btnP2.OnEvent("Click", (*) => AutoCodeSetPointFromButton(2))
+
+    autoCodeGui.AddText("x10 y282 w25", "P3:")
+    autoCodeP3Text := autoCodeGui.AddText("x38 y282 w145", AutoCodePointText(3))
+    btnP3 := autoCodeGui.AddButton("x205 y276 w105 h26", "SET (F3)")
+    btnP3.OnEvent("Click", (*) => AutoCodeSetPointFromButton(3))
+
+    autoCodeGui.AddText("x10 y314 w45", "Action:")
+    autoCodeDelayEdit := autoCodeGui.AddEdit("x55 y310 w45", AUTO_CODE_ACTION_DELAY)
+    autoCodeGui.AddText("x103 y314 w18", "ms")
+
+    autoCodeGui.AddText("x160 y314 w35", "Line:")
+    autoCodeLineDelayEdit := autoCodeGui.AddEdit("x195 y310 w45", AUTO_CODE_LINE_DELAY)
+    autoCodeGui.AddText("x243 y314 w18", "ms")
+
+    btnStart := autoCodeGui.AddButton("x10 y342 w145 h30", "START (F5)")
+    btnStop := autoCodeGui.AddButton("x165 y342 w145 h30", "STOP (ESC)")
+    btnStart.OnEvent("Click", (*) => AutoCodeStart())
+    btnStop.OnEvent("Click", (*) => AutoCodeStop())
+
+    autoCodeGui.AddText("x10 y380 w300 h25 Center", "F1/F2/F3 = Set | F5 = Start | ESC = Stop")
+    autoCodeGui.OnEvent("Close", (*) => AutoCodeHideGui())
+}
+
+AutoCodeHideGui() {
+    global autoCodeGui, autoCodeGuiVisible
+    if IsObject(autoCodeGui)
+        autoCodeGui.Hide()
+    autoCodeGuiVisible := false
+}
+
+AutoCodeRefreshPointLabels() {
+    global autoCodeP1Text, autoCodeP2Text, autoCodeP3Text
+    if IsObject(autoCodeP1Text)
+        autoCodeP1Text.Text := AutoCodePointText(1)
+    if IsObject(autoCodeP2Text)
+        autoCodeP2Text.Text := AutoCodePointText(2)
+    if IsObject(autoCodeP3Text)
+        autoCodeP3Text.Text := AutoCodePointText(3)
+}
+
+AutoCodeNormalizeProfileName(name) {
+    cleaned := Trim(name)
+    return cleaned = "" ? "Default" : cleaned
+}
+
+AutoCodeGetCurrentResolutionProfile() {
+    global GAME_TITLE
+    hwnd := WinExist(GAME_TITLE)
+    if hwnd {
+        WinGetClientPos(&gameX, &gameY, &gameW, &gameH, "ahk_id " hwnd)
+        if gameW > 0 && gameH > 0
+            return gameW "x" gameH
+    }
+    return A_ScreenWidth "x" A_ScreenHeight
+}
+
+AutoCodeFindProfileIndex(profileName) {
+    global autoCodeProfiles
+    for i, name in autoCodeProfiles {
+        if name = profileName
+            return i
+    }
+    return 0
+}
+
+AutoCodeEnsureProfile(profileName) {
+    global autoCodeProfiles
+    profileName := AutoCodeNormalizeProfileName(profileName)
+    if AutoCodeFindProfileIndex(profileName) = 0
+        autoCodeProfiles.Push(profileName)
+    return profileName
+}
+
+AutoCodeProfileSection(profileName) {
+    safeName := RegExReplace(profileName, "[^0-9A-Za-z_]", "_")
+    return "POINTS_" safeName
+}
+
+AutoCodeRefreshProfileOptions() {
+    global autoCodeProfileSelect, autoCodeProfiles, autoCodeCurrentProfile, autoCodeProfileSyncing
+    if !IsObject(autoCodeProfileSelect)
+        return
+
+    autoCodeProfileSyncing := true
+    autoCodeProfileSelect.Delete()
+    if autoCodeProfiles.Length = 0
+        autoCodeProfiles.Push(AutoCodeGetCurrentResolutionProfile())
+    autoCodeProfileSelect.Add(autoCodeProfiles)
+    idx := AutoCodeFindProfileIndex(autoCodeCurrentProfile)
+    if idx = 0 {
+        idx := 1
+        autoCodeCurrentProfile := autoCodeProfiles[1]
+    }
+    autoCodeProfileSelect.Choose(idx)
+    autoCodeProfileSyncing := false
+}
+
+AutoCodeOnProfileChanged(ctrl, *) {
+    global autoCodeProfileSyncing, autoCodeCurrentProfile
+    if autoCodeProfileSyncing
+        return
+    selected := AutoCodeNormalizeProfileName(ctrl.Text)
+    if selected = autoCodeCurrentProfile
+        return
+    AutoCodeSwitchProfile(selected)
+}
+
+AutoCodeSwitchProfile(profileName) {
+    global autoCodeCurrentProfile
+    profileName := AutoCodeEnsureProfile(profileName)
+    autoCodeCurrentProfile := profileName
+    AutoCodeLoadPointsForProfile(profileName)
+    AutoCodeRefreshProfileOptions()
+    AutoCodeRefreshPointLabels()
+    AutoCodeSaveSettings()
+}
+
+AutoCodeUseCurrentResolutionProfile() {
+    profileName := AutoCodeGetCurrentResolutionProfile()
+    AutoCodeSwitchProfile(profileName)
+    ToolTip("Using profile: " profileName)
+    SetTimer(() => ToolTip(), -1200)
+}
+
+AutoCodeLoadPointsForProfile(profileName) {
+    global AUTO_CODE_CONFIG
+    global autoCodeP1X, autoCodeP1Y, autoCodeP1Color, autoCodeP1Set
+    global autoCodeP2X, autoCodeP2Y, autoCodeP2Set
+    global autoCodeP3X, autoCodeP3Y, autoCodeP3Set
+
+    section := AutoCodeProfileSection(profileName)
+    if !FileExist(AUTO_CODE_CONFIG) {
+        autoCodeP1X := 0, autoCodeP1Y := 0, autoCodeP1Color := 0, autoCodeP1Set := false
+        autoCodeP2X := 0, autoCodeP2Y := 0, autoCodeP2Set := false
+        autoCodeP3X := 0, autoCodeP3Y := 0, autoCodeP3Set := false
+        return
+    }
+
+    try {
+        autoCodeP1X := Integer(IniRead(AUTO_CODE_CONFIG, section, "P1X", "0"))
+        autoCodeP1Y := Integer(IniRead(AUTO_CODE_CONFIG, section, "P1Y", "0"))
+        autoCodeP1Color := Integer(IniRead(AUTO_CODE_CONFIG, section, "P1COLOR", "0"))
+        autoCodeP1Set := IniRead(AUTO_CODE_CONFIG, section, "P1SET", "0") = "1"
+        autoCodeP2X := Integer(IniRead(AUTO_CODE_CONFIG, section, "P2X", "0"))
+        autoCodeP2Y := Integer(IniRead(AUTO_CODE_CONFIG, section, "P2Y", "0"))
+        autoCodeP2Set := IniRead(AUTO_CODE_CONFIG, section, "P2SET", "0") = "1"
+        autoCodeP3X := Integer(IniRead(AUTO_CODE_CONFIG, section, "P3X", "0"))
+        autoCodeP3Y := Integer(IniRead(AUTO_CODE_CONFIG, section, "P3Y", "0"))
+        autoCodeP3Set := IniRead(AUTO_CODE_CONFIG, section, "P3SET", "0") = "1"
+    }
+    catch {
+        autoCodeP1X := 0, autoCodeP1Y := 0, autoCodeP1Color := 0, autoCodeP1Set := false
+        autoCodeP2X := 0, autoCodeP2Y := 0, autoCodeP2Set := false
+        autoCodeP3X := 0, autoCodeP3Y := 0, autoCodeP3Set := false
+    }
+}
+
+AutoCodeSetPointFromButton(number) {
+    if !FocusGame()
+        return
+    ToolTip("Move mouse to Point " number "`nand press F" number " again.")
+    SetTimer(() => ToolTip(), -2500)
+}
+
+AutoCodeSetPoint(number) {
+    global GAME_TITLE
+    global autoCodeP1X, autoCodeP1Y, autoCodeP1Color, autoCodeP1Set
+    global autoCodeP2X, autoCodeP2Y, autoCodeP2Set
+    global autoCodeP3X, autoCodeP3Y, autoCodeP3Set
+
+    hwnd := WinExist(GAME_TITLE)
+    if !hwnd || !WinActive("ahk_id " hwnd)
+        return
+
+    CoordMode "Mouse", "Screen"
+    MouseGetPos(&screenX, &screenY)
+
+    AutoCodeClientOriginToScreen(hwnd, &clientScreenX, &clientScreenY)
+    x := screenX - clientScreenX
+    y := screenY - clientScreenY
+
+    WinGetClientPos(&gameX, &gameY, &gameW, &gameH, "ahk_id " hwnd)
+    if (x < 0 || y < 0 || x >= gameW || y >= gameH) {
+        ToolTip("Point must be inside Where Winds Meet.")
+        SetTimer(() => ToolTip(), -1500)
+        return
+    }
+
+    switch number {
+        case 1:
+            autoCodeP1X := x
+            autoCodeP1Y := y
+            CoordMode "Pixel", "Screen"
+            try autoCodeP1Color := PixelGetColor(screenX, screenY, "RGB")
+            catch {
+                MsgBox("Unable to capture Point 1.", GAME_TITLE " Auto", "Icon!")
+                return
+            }
+            autoCodeP1Set := true
+        case 2:
+            autoCodeP2X := x
+            autoCodeP2Y := y
+            autoCodeP2Set := true
+        case 3:
+            autoCodeP3X := x
+            autoCodeP3Y := y
+            autoCodeP3Set := true
+    }
+
+    AutoCodeSaveSettings()
+    AutoCodeRefreshPointLabels()
+    ToolTip("Point " number " saved")
+    SetTimer(() => ToolTip(), -1000)
+}
+
+AutoCodeClientOriginToScreen(hwnd, &x, &y) {
+    pt := Buffer(8, 0)
+    NumPut("Int", 0, pt, 0)
+    NumPut("Int", 0, pt, 4)
+    DllCall("ClientToScreen", "Ptr", hwnd, "Ptr", pt)
+    x := NumGet(pt, 0, "Int")
+    y := NumGet(pt, 4, "Int")
+}
+
+AutoCodeGamePointToScreen(hwnd, clientX, clientY, &screenX, &screenY) {
+    pt := Buffer(8, 0)
+    NumPut("Int", clientX, pt, 0)
+    NumPut("Int", clientY, pt, 4)
+    DllCall("ClientToScreen", "Ptr", hwnd, "Ptr", pt)
+    screenX := NumGet(pt, 0, "Int")
+    screenY := NumGet(pt, 4, "Int")
+}
+
+AutoCodeClickGamePoint(clientX, clientY) {
+    global GAME_TITLE, stopRequested
+    if stopRequested
+        return false
+
+    hwnd := WinExist(GAME_TITLE)
+    if !hwnd
+        return false
+
+    if !WinActive("ahk_id " hwnd) {
+        if !FocusGame()
+            return false
+    }
+
+    AutoCodeGamePointToScreen(hwnd, clientX, clientY, &screenX, &screenY)
+    CoordMode "Mouse", "Screen"
+    MouseMove(screenX, screenY, 0)
+    Sleep 50
+    if stopRequested
+        return false
+    Click "Left"
+    return true
+}
+
+AutoCodeSleep(ms) {
+    global stopRequested
+    elapsed := 0
+    while elapsed < ms {
+        if stopRequested
+            return false
+        amount := Min(50, ms - elapsed)
+        Sleep amount
+        elapsed += amount
+    }
+    return true
+}
+
+AutoCodeReplaceInputWithCode(code) {
+    global stopRequested
+    if stopRequested
+        return false
+
+    SendEvent "^a"
+    if !AutoCodeSleep(100)
+        return false
+
+    backup := ClipboardAll()
+    A_Clipboard := ""
+    A_Clipboard := code
+    if !ClipWait(1) {
+        A_Clipboard := backup
+        return false
+    }
+
+    SendEvent "^v"
+    Sleep 100
+    A_Clipboard := backup
+    return true
+}
+
+AutoCodeGetCurrentP1Color() {
+    global GAME_TITLE, autoCodeP1X, autoCodeP1Y
+    hwnd := WinExist(GAME_TITLE)
+    if !hwnd
+        return -1
+
+    AutoCodeGamePointToScreen(hwnd, autoCodeP1X, autoCodeP1Y, &screenX, &screenY)
+    CoordMode "Pixel", "Screen"
+    try {
+        return PixelGetColor(screenX, screenY, "RGB")
+    }
+    catch {
+        return -1
+    }
+}
+
+AutoCodeColorSimilar(color1, color2, tolerance) {
+    r1 := (color1 >> 16) & 0xFF
+    g1 := (color1 >> 8) & 0xFF
+    b1 := color1 & 0xFF
+    r2 := (color2 >> 16) & 0xFF
+    g2 := (color2 >> 8) & 0xFF
+    b2 := color2 & 0xFF
+    return Abs(r1 - r2) <= tolerance && Abs(g1 - g2) <= tolerance && Abs(b1 - b2) <= tolerance
+}
+
+AutoCodeWaitForP1NormalColor() {
+    global autoCodeP1Color, AUTO_CODE_COLOR_TOLERANCE, AUTO_CODE_COLOR_INITIAL_WAIT
+    global AUTO_CODE_COLOR_CHECK_TIMEOUT, AUTO_CODE_COLOR_CHECK_INTERVAL, stopRequested
+
+    if !AutoCodeSleep(AUTO_CODE_COLOR_INITIAL_WAIT)
+        return false
+
+    elapsed := 0
+    while elapsed <= AUTO_CODE_COLOR_CHECK_TIMEOUT {
+        if stopRequested
+            return false
+        currentColor := AutoCodeGetCurrentP1Color()
+        if currentColor != -1 && AutoCodeColorSimilar(currentColor, autoCodeP1Color, AUTO_CODE_COLOR_TOLERANCE)
+            return true
+        if !AutoCodeSleep(AUTO_CODE_COLOR_CHECK_INTERVAL)
+            return false
+        elapsed += AUTO_CODE_COLOR_CHECK_INTERVAL
+    }
+    return false
+}
+
+AutoCodeParseCodes(raw) {
+    codes := []
+    Loop Parse, raw, "`n", "`r" {
+        code := Trim(A_LoopField)
+        if code != ""
+            codes.Push(code)
+    }
+    return codes
+}
+
+AutoCodeStart() {
+    global activeMacro, stopRequested, GAME_TITLE
+    global autoCodeP1Set, autoCodeP2Set, autoCodeP3Set
+    global autoCodeP1X, autoCodeP1Y, autoCodeP2X, autoCodeP2Y, autoCodeP3X, autoCodeP3Y
+    global autoCodeCodeBox, autoCodeDelayEdit, autoCodeLineDelayEdit
+    global AUTO_CODE_ACTION_DELAY, AUTO_CODE_LINE_DELAY
+
+    if activeMacro = "Redeem Gift Codes"
+        return
+
+    if !StartMacro("Redeem Gift Codes") {
+        MsgBox("Another macro is running. Stop it before starting Auto Code.", GAME_TITLE " Auto", "Icon!")
+        return
+    }
+
+    if (!autoCodeP1Set || !autoCodeP2Set || !autoCodeP3Set) {
+        MsgBox("Please set all three points first.", GAME_TITLE " Auto", "Icon!")
+        StopMacro()
+        return
+    }
+
+    raw := autoCodeCodeBox.Value
+    if Trim(raw) = "" {
+        MsgBox("Please enter at least one code.", GAME_TITLE " Auto", "Icon!")
+        StopMacro()
+        return
+    }
+
+    codes := AutoCodeParseCodes(raw)
+    if codes.Length = 0 {
+        StopMacro()
+        return
+    }
+
+    try {
+        delay := Integer(autoCodeDelayEdit.Value)
+    }
+    catch {
+        delay := AUTO_CODE_ACTION_DELAY
+    }
+    delay := Max(50, delay)
+
+    try {
+        lineDelay := Integer(autoCodeLineDelayEdit.Value)
+    }
+    catch {
+        lineDelay := AUTO_CODE_LINE_DELAY
+    }
+    lineDelay := Max(50, lineDelay)
+
+    if !FocusGame() {
+        StopMacro()
+        return
+    }
+
+    needPoint1 := true
+    completedAllCodes := true
+
+    if !AutoCodeSleep(300)
+        completedAllCodes := false
+
+    if completedAllCodes {
+        for _, code in codes {
+            if stopRequested {
+                completedAllCodes := false
+                break
+            }
+
+            if !WinActive(GAME_TITLE) {
+                if !FocusGame() {
+                    completedAllCodes := false
+                    stopRequested := true
+                    break
+                }
+                if !AutoCodeSleep(300) {
+                    completedAllCodes := false
+                    break
+                }
+            }
+
+            if needPoint1 {
+                if !AutoCodeClickGamePoint(autoCodeP1X, autoCodeP1Y) {
+                    completedAllCodes := false
+                    break
+                }
+                if !AutoCodeSleep(delay) {
+                    completedAllCodes := false
+                    break
+                }
+            }
+
+            if !AutoCodeClickGamePoint(autoCodeP2X, autoCodeP2Y) {
+                completedAllCodes := false
+                break
+            }
+            if !AutoCodeSleep(delay) {
+                completedAllCodes := false
+                break
+            }
+
+            if !AutoCodeReplaceInputWithCode(code) {
+                completedAllCodes := false
+                break
+            }
+            if !AutoCodeSleep(delay) {
+                completedAllCodes := false
+                break
+            }
+
+            if !AutoCodeClickGamePoint(autoCodeP3X, autoCodeP3Y) {
+                completedAllCodes := false
+                break
+            }
+
+            isNormal := AutoCodeWaitForP1NormalColor()
+            if stopRequested {
+                completedAllCodes := false
+                break
+            }
+            needPoint1 := isNormal
+
+            if !AutoCodeSleep(lineDelay) {
+                completedAllCodes := false
+                break
+            }
+        }
+    }
+
+    wasStopped := stopRequested
+    stopRequested := false
+    StopMacro()
+
+    if wasStopped {
+        ToolTip("Auto Code stopped.")
+        SetTimer(() => ToolTip(), -1500)
+        return
+    }
+
+    if completedAllCodes {
+        ToolTip("All codes completed!")
+        SetTimer(() => ToolTip(), -2500)
+        return
+    }
+
+    ToolTip("Auto Code stopped.")
+    SetTimer(() => ToolTip(), -1500)
+}
+
+AutoCodeStop() {
+    global activeMacro, stopRequested
+    if activeMacro = "Redeem Gift Codes"
+        stopRequested := true
+}
+
+AutoCodePointText(number) {
+    global autoCodeP1Set, autoCodeP1X, autoCodeP1Y
+    global autoCodeP2Set, autoCodeP2X, autoCodeP2Y
+    global autoCodeP3Set, autoCodeP3X, autoCodeP3Y
+    switch number {
+        case 1:
+            if autoCodeP1Set
+                return "X:" autoCodeP1X " Y:" autoCodeP1Y
+        case 2:
+            if autoCodeP2Set
+                return "X:" autoCodeP2X " Y:" autoCodeP2Y
+        case 3:
+            if autoCodeP3Set
+                return "X:" autoCodeP3X " Y:" autoCodeP3Y
+    }
+    return "Not set"
+}
+
+AutoCodeSaveSettings() {
+    global AUTO_CODE_CONFIG, autoCodeProfiles, autoCodeCurrentProfile
+    global autoCodeP1X, autoCodeP1Y, autoCodeP1Color, autoCodeP1Set
+    global autoCodeP2X, autoCodeP2Y, autoCodeP2Set
+    global autoCodeP3X, autoCodeP3Y, autoCodeP3Set
+
+    profileName := AutoCodeEnsureProfile(autoCodeCurrentProfile)
+    autoCodeCurrentProfile := profileName
+    section := AutoCodeProfileSection(profileName)
+    profilesText := ""
+    for i, name in autoCodeProfiles {
+        profilesText .= (i = 1 ? "" : "|") name
+    }
+
+    try {
+        IniWrite(profileName, AUTO_CODE_CONFIG, "META", "CurrentProfile")
+        IniWrite(profilesText, AUTO_CODE_CONFIG, "META", "Profiles")
+        IniWrite(autoCodeP1X, AUTO_CODE_CONFIG, section, "P1X")
+        IniWrite(autoCodeP1Y, AUTO_CODE_CONFIG, section, "P1Y")
+        IniWrite(autoCodeP1Color, AUTO_CODE_CONFIG, section, "P1COLOR")
+        IniWrite(autoCodeP1Set ? 1 : 0, AUTO_CODE_CONFIG, section, "P1SET")
+        IniWrite(autoCodeP2X, AUTO_CODE_CONFIG, section, "P2X")
+        IniWrite(autoCodeP2Y, AUTO_CODE_CONFIG, section, "P2Y")
+        IniWrite(autoCodeP2Set ? 1 : 0, AUTO_CODE_CONFIG, section, "P2SET")
+        IniWrite(autoCodeP3X, AUTO_CODE_CONFIG, section, "P3X")
+        IniWrite(autoCodeP3Y, AUTO_CODE_CONFIG, section, "P3Y")
+        IniWrite(autoCodeP3Set ? 1 : 0, AUTO_CODE_CONFIG, section, "P3SET")
+    }
+}
+
+AutoCodeLoadSettings() {
+    global AUTO_CODE_CONFIG, autoCodeProfiles, autoCodeCurrentProfile
+    global autoCodeP1X, autoCodeP1Y, autoCodeP1Color, autoCodeP1Set
+    global autoCodeP2X, autoCodeP2Y, autoCodeP2Set
+    global autoCodeP3X, autoCodeP3Y, autoCodeP3Set
+
+    autoCodeProfiles := []
+    defaultProfile := AutoCodeGetCurrentResolutionProfile()
+
+    if !FileExist(AUTO_CODE_CONFIG) {
+        autoCodeCurrentProfile := defaultProfile
+        AutoCodeEnsureProfile(defaultProfile)
+        AutoCodeLoadPointsForProfile(defaultProfile)
+        return
+    }
+
+    try {
+        profilesRaw := IniRead(AUTO_CODE_CONFIG, "META", "Profiles", "")
+        if profilesRaw != "" {
+            for _, profileName in StrSplit(profilesRaw, "|") {
+                profileName := AutoCodeNormalizeProfileName(profileName)
+                if AutoCodeFindProfileIndex(profileName) = 0
+                    autoCodeProfiles.Push(profileName)
+            }
+        }
+        autoCodeCurrentProfile := AutoCodeNormalizeProfileName(IniRead(AUTO_CODE_CONFIG, "META", "CurrentProfile", defaultProfile))
+    }
+    catch {
+        autoCodeCurrentProfile := defaultProfile
+    }
+
+    legacyLoaded := false
+    if autoCodeProfiles.Length = 0 {
+        try {
+            p1x := IniRead(AUTO_CODE_CONFIG, "POINTS", "P1X", "")
+            if p1x != "" {
+                autoCodeP1X := Integer(p1x)
+                autoCodeP1Y := Integer(IniRead(AUTO_CODE_CONFIG, "POINTS", "P1Y", "0"))
+                autoCodeP1Color := Integer(IniRead(AUTO_CODE_CONFIG, "POINTS", "P1COLOR", "0"))
+                autoCodeP1Set := IniRead(AUTO_CODE_CONFIG, "POINTS", "P1SET", "0") = "1"
+                autoCodeP2X := Integer(IniRead(AUTO_CODE_CONFIG, "POINTS", "P2X", "0"))
+                autoCodeP2Y := Integer(IniRead(AUTO_CODE_CONFIG, "POINTS", "P2Y", "0"))
+                autoCodeP2Set := IniRead(AUTO_CODE_CONFIG, "POINTS", "P2SET", "0") = "1"
+                autoCodeP3X := Integer(IniRead(AUTO_CODE_CONFIG, "POINTS", "P3X", "0"))
+                autoCodeP3Y := Integer(IniRead(AUTO_CODE_CONFIG, "POINTS", "P3Y", "0"))
+                autoCodeP3Set := IniRead(AUTO_CODE_CONFIG, "POINTS", "P3SET", "0") = "1"
+                autoCodeCurrentProfile := defaultProfile
+                AutoCodeEnsureProfile(defaultProfile)
+                legacyLoaded := true
+            }
+        }
+    }
+
+    if !legacyLoaded {
+        AutoCodeEnsureProfile(defaultProfile)
+        AutoCodeEnsureProfile(autoCodeCurrentProfile)
+        AutoCodeLoadPointsForProfile(autoCodeCurrentProfile)
+    }
+}
+
+AutoCodeHotkeysEnabled() {
+    global autoCodeGuiVisible, activeMacro
+    return autoCodeGuiVisible || activeMacro = "Redeem Gift Codes"
+}
+
+AutoCodeHandlePointHotkey(number) {
+    global autoCodeGui, autoCodeGuiVisible, GAME_TITLE
+    if !AutoCodeHotkeysEnabled()
+        return
+
+    if WinActive(GAME_TITLE) {
+        AutoCodeSetPoint(number)
+        return
+    }
+
+    if autoCodeGuiVisible && IsObject(autoCodeGui) && WinActive("ahk_id " autoCodeGui.Hwnd) {
+        if !FocusGame()
+            return
+        ToolTip("Move mouse to Point " number "`nand press F" number " again.")
+        SetTimer(() => ToolTip(), -2000)
+    }
+}
+
+#HotIf AutoCodeHotkeysEnabled()
+
+F1:: AutoCodeHandlePointHotkey(1)
+F2:: AutoCodeHandlePointHotkey(2)
+F3:: AutoCodeHandlePointHotkey(3)
+F5:: AutoCodeStart()
+
+#HotIf

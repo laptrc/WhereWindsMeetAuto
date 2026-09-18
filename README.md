@@ -21,6 +21,7 @@ AutoHotkey v2 automation script for _Where Winds Meet_ with a GUI launcher and h
 | ⭐ Gather Herb (Fleethoof)                | Ctrl+Alt+6 | Horse — Fleethoof, 1 set to Spirit Gift - Gather           |
 | Mine Stone                                | Ctrl+Alt+M | Weapon — Thundercry Blade                                  |
 | Play Swing                                | Ctrl+Alt+P | Sit on a boat swing first                                  |
+| Redeem Gift Codes                         | F1/F2/F3/F5| Set P1/P2/P3 points in Auto Code sub window               |
 
 ---
 
@@ -44,6 +45,9 @@ AutoHotkey v2 automation script for _Where Winds Meet_ with a GUI launcher and h
 - **Auto-focus** — Clicking **Start** will automatically bring the game window into focus.
 - **One macro at a time** — Only one macro can run at a time. Press **Esc** to stop the active macro before starting a new one.
 - **Monthly Pass popup auto-dismiss** — While any macro is active, the script sends `Space` once during `04:01 Asia/Ho_Chi_Minh (UTC+7)` to close the Monthly Pass popup.
+- **Auto Code sub window** — Start **Redeem Gift Codes** from the main GUI to open a dedicated window. Choose a profile from the select box (profiles are named by resolution like `1920x1080`), then use `F1`/`F2`/`F3` to set points, `F5` to start, `Esc` to stop while running. Forked from [WhereWindsMeet-AutoCode](https://github.com/yeucon02vn/WhereWindsMeet-AutoCode).
+
+    ![Where Winds Meet Auto Code GUI](assets/WhereWindsMeetAutoCode.png)
 
 ---
 
