@@ -15,7 +15,14 @@ if A_IsCompiled {
 ; =============================================================================
 
 ; Title of the game window — single source of truth used throughout the script.
-global GAME_TITLE := "Where Winds Meet"
+; User-editable via the GUI input box; persisted in WWM_Settings.ini.
+global DEFAULT_GAME_TITLE := "Where Winds Meet"
+global GAME_TITLE := DEFAULT_GAME_TITLE
+global SETTINGS_INI := A_ScriptDir "\WWM_Settings.ini"
+
+; Fixed display title of this app (GUI window, MsgBox titles) — never changes
+; with the game window title.
+global APP_TITLE := "Where Winds Meet Auto"
 
 ; Name of the currently active macro, or "" if none is running.
 ; Prevents two macros from running simultaneously.
@@ -26,7 +33,9 @@ global activeMacro := ""
 global stopRequested := false
 
 ; AutoCode configuration and state (redeem gift codes)
-global AUTO_CODE_CONFIG := A_ScriptDir "\WWM_AutoCode.ini"
+; All settings (window title + AutoCode) live in WWM_Settings.ini.
+global AUTO_CODE_CONFIG := SETTINGS_INI
+global AUTO_CODE_CONFIG_LEGACY := A_ScriptDir "\WWM_AutoCode.ini"
 global AUTO_CODE_ACTION_DELAY := 500
 global AUTO_CODE_LINE_DELAY := 500
 global AUTO_CODE_COLOR_TOLERANCE := 30
@@ -58,7 +67,42 @@ global autoCodeProfiles := []
 global autoCodeCurrentProfile := ""
 global autoCodeProfileSyncing := false
 
+; Loads the saved game window title (falls back to the default if missing/empty).
+LoadGameTitleSetting() {
+    global GAME_TITLE, SETTINGS_INI
+    saved := IniRead(SETTINGS_INI, "Window", "Title", "")
+    GAME_TITLE := saved != "" ? saved : DEFAULT_GAME_TITLE
+}
+
+; One-time migration: moves all sections/keys from the old WWM_AutoCode.ini into
+; WWM_Settings.ini, then deletes the legacy file. Only deletes on full success.
+MigrateLegacyAutoCodeIni() {
+    global AUTO_CODE_CONFIG, AUTO_CODE_CONFIG_LEGACY
+    if !FileExist(AUTO_CODE_CONFIG_LEGACY)
+        return
+    try {
+        for _, section in StrSplit(IniRead(AUTO_CODE_CONFIG_LEGACY), "`n", "`r") {
+            if section = ""
+                continue
+            for _, kv in StrSplit(IniRead(AUTO_CODE_CONFIG_LEGACY, section), "`n", "`r") {
+                pos := InStr(kv, "=")
+                if pos > 1
+                    IniWrite(SubStr(kv, pos + 1), AUTO_CODE_CONFIG, section, SubStr(kv, 1, pos - 1))
+            }
+        }
+        FileDelete(AUTO_CODE_CONFIG_LEGACY)
+    }
+    catch as err {
+        MsgBox("Could not migrate WWM_AutoCode.ini to WWM_Settings.ini: " err.Message, APP_TITLE, "Icon!")
+        return
+    }
+}
+
+MigrateLegacyAutoCodeIni()
+
 AutoCodeLoadSettings()
+
+LoadGameTitleSetting()
 
 ; =============================================================================
 ; Helper Functions
@@ -73,11 +117,38 @@ StopMacroRequest(ignoreFocus := false) {
     stopRequested := true
 }
 
+; Silent sync: saves the title typed in the GUI input to GAME_TITLE + INI.
+; Skips when the input is empty or unchanged. No dialogs — callers report errors.
+SyncGameTitleFromInput() {
+    global GAME_TITLE, SETTINGS_INI, gameTitleEdit
+    if !IsObject(gameTitleEdit)
+        return
+    newTitle := Trim(gameTitleEdit.Value)
+    if newTitle = "" || newTitle = GAME_TITLE
+        return
+    GAME_TITLE := newTitle
+    IniWrite(newTitle, SETTINGS_INI, "Window", "Title")
+}
+
+; Apply button: validates the GUI input, saves it, and warns if no window
+; matches the title yet.
+ApplyGameTitle(*) {
+    global GAME_TITLE, gameTitleEdit
+    if Trim(gameTitleEdit.Value) = "" {
+        MsgBox("Please enter a window title.", APP_TITLE, "Icon!")
+        return
+    }
+    SyncGameTitleFromInput()
+    if !WinExist(GAME_TITLE)
+        MsgBox("No window named '" GAME_TITLE "' found. Macros will start once the game is running.", APP_TITLE, "Icon!")
+}
+
 ; Attempts to start a macro. Returns true if the macro may proceed, false if
 ; any other macro is already running.
 ; Resets stopRequested and enables the Esc hotkey.
 StartMacro(name) {
     global activeMacro, stopRequested
+    SyncGameTitleFromInput()
     if activeMacro != ""
         return false
     activeMacro := name
@@ -110,17 +181,20 @@ SleepChecked(ms) {
 
 ; Focuses the game window. Returns true on success, false if the window was
 ; not found or could not be activated within 3 seconds.
+; Syncs GAME_TITLE from the GUI input first, so typing a new title takes effect
+; even without pressing Apply.
 FocusGame() {
     global GAME_TITLE
+    SyncGameTitleFromInput()
     if !WinExist(GAME_TITLE) {
-        MsgBox(GAME_TITLE " is not running.", GAME_TITLE " Auto", "Icon!")
+        MsgBox(GAME_TITLE " is not running.", APP_TITLE, "Icon!")
         return false
     }
     WinActivate GAME_TITLE
     WinWaitActive GAME_TITLE, , 3
     if WinActive(GAME_TITLE)
         return true
-    MsgBox("Could not focus " GAME_TITLE ".", GAME_TITLE " Auto", "Icon!")
+    MsgBox("Could not focus " GAME_TITLE ".", APP_TITLE, "Icon!")
     return false
 }
 
@@ -388,7 +462,7 @@ global features := [{ name: "Catch Fish",
 global macroFuncs := [RunCatchFish, RunToxicPowderWBW, RunToxicPowderSilkbind, RunBeefTendon, RunGatherHerbF,
     RunGatherHerbN, RunGatherHerbFleethoof, RunMineStone, RunPlaySwing, RunAutoCode]
 
-AppGui := Gui("-Resize", GAME_TITLE " Auto")
+AppGui := Gui("-Resize", APP_TITLE)
 
 ; --- Status row ---
 AppGui.SetFont("s9 Norm", "Segoe UI")
@@ -445,6 +519,15 @@ stopBtn.OnEvent("Click", (*) => StopMacroRequest(true))
 AppGui.SetFont("s8 Norm", "Segoe UI")
 AppGui.Add("Text", "x112 y" (rowY + 6) " w380", "Esc stops macro when game is focused (or during Redeem Gift Codes).")
 rowY += 34
+
+; --- Game window title input ---
+AppGui.SetFont("s9 Norm", "Segoe UI")
+AppGui.Add("Text", "x12 y" rowY " w130 h21", "Game Window Title:")
+global gameTitleEdit := AppGui.AddEdit("x145 y" rowY " w247 h21", GAME_TITLE)
+applyTitleBtn := AppGui.Add("Button", "x397 y" (rowY - 1) " w80 h24", "Apply")
+applyTitleBtn.OnEvent("Click", ApplyGameTitle)
+rowY += 30
+AppGui.SetFont("s8 Norm", "Segoe UI")
 AppGui.Add("Text", "x12 y" rowY " w480", "Note: while any macro is active, the script sends Space once during 04:01 Asia/Ho_Chi_Minh (UTC+7) to close the Monthly Pass popup.")
 
 AppGui.Show("w500")
@@ -698,7 +781,7 @@ AutoCodeSetPoint(number) {
 
     WinGetClientPos(&gameX, &gameY, &gameW, &gameH, "ahk_id " hwnd)
     if (x < 0 || y < 0 || x >= gameW || y >= gameH) {
-        ToolTip("Point must be inside Where Winds Meet.")
+        ToolTip("Point must be inside the game window.")
         SetTimer(() => ToolTip(), -1500)
         return
     }
@@ -710,7 +793,7 @@ AutoCodeSetPoint(number) {
             CoordMode "Pixel", "Screen"
             try autoCodeP1Color := PixelGetColor(screenX, screenY, "RGB")
             catch {
-                MsgBox("Unable to capture Point 1.", GAME_TITLE " Auto", "Icon!")
+                MsgBox("Unable to capture Point 1.", APP_TITLE, "Icon!")
                 return
             }
             autoCodeP1Set := true
@@ -876,19 +959,19 @@ AutoCodeStart() {
         return
 
     if !StartMacro("Redeem Gift Codes") {
-        MsgBox("Another macro is running. Stop it before starting Auto Code.", GAME_TITLE " Auto", "Icon!")
+        MsgBox("Another macro is running. Stop it before starting Auto Code.", APP_TITLE, "Icon!")
         return
     }
 
     if (!autoCodeP1Set || !autoCodeP2Set || !autoCodeP3Set) {
-        MsgBox("Please set all three points first.", GAME_TITLE " Auto", "Icon!")
+        MsgBox("Please set all three points first.", APP_TITLE, "Icon!")
         StopMacro()
         return
     }
 
     raw := autoCodeCodeBox.Value
     if Trim(raw) = "" {
-        MsgBox("Please enter at least one code.", GAME_TITLE " Auto", "Icon!")
+        MsgBox("Please enter at least one code.", APP_TITLE, "Icon!")
         StopMacro()
         return
     }
