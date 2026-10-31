@@ -402,56 +402,30 @@ RunPlaySwing(*) {
 }
 
 RunSandstormTavern(*) {
-    global stopRequested, GAME_TITLE
+    global stopRequested
     if !StartMacro("Sandstorm Tavern")
         return
-    if !FocusGame() {
-        StopMacro()
-        return
-    }
-    SleepChecked 1500
+    ; Dialogue choices per tavern run, one per 15 s step.
+    dialogueKeys := ["n", "y", "n", "n", "y"]
+    dialogueWait := 15000
     loop {
         if stopRequested
             break
-        WinActivate(GAME_TITLE)
-        Send("{w down}")
-        Sleep(900)
-        Send("{w up}")
-        Sleep(1000)
+        GameHold("w", 900)
+        SleepChecked 1000
+        GameSend "f"
+        SleepChecked dialogueWait
+        for key in dialogueKeys {
+            if stopRequested
+                break
+            GameSend key
+            SleepChecked dialogueWait
+        }
         if stopRequested
             break
-        WinActivate(GAME_TITLE)
-        Send("f")
-        Sleep(15000)
-        if stopRequested
-            break
-        WinActivate(GAME_TITLE)
-        Send("n")
-        Sleep(15000)
-        if stopRequested
-            break
-        Send("y")
-        Sleep(15000)
-        if stopRequested
-            break
-        Send("n")
-        Sleep(15000)
-        if stopRequested
-            break
-        Send("n")
-        Sleep(15000)
-        if stopRequested
-            break
-        Send("y")
-        Sleep(15000)
-        if stopRequested
-            break
-        Sleep(15000)
-        if stopRequested
-            break
-        WinActivate(GAME_TITLE)
-        Send("f")
-        Sleep(15000)
+        SleepChecked dialogueWait
+        GameSend "f"
+        SleepChecked dialogueWait
     }
     StopMacro()
 }
@@ -509,7 +483,7 @@ global features := [{ name: "Catch Fish",
                                     notes: "Go to Swing Play on a boat, press F to sit down first`nKeys: F (Interaction)" }, { name: "Sandstorm Tavern",
                                         hotkey: "Ctrl+Alt+T",
                                         url: "",
-                                        notes: "Auto cycle at Sandstorm Tavern`nKeys: N, Y (cycle: N -> Y -> N -> N -> Y)" },
+                                        notes: "Requires: Speed ×3, tick `"Don't remind today`"`nKeys: N, Y (cycle: N -> Y -> N -> N -> Y)" },
 { name: "Redeem Gift Codes",
     hotkey: "F1/F2/F3/F5",
     url: "https://www.youtube.com/watch?v=EMZKfgAHP5k",
