@@ -401,6 +401,35 @@ RunPlaySwing(*) {
     StopMacro()
 }
 
+RunSandstormTavern(*) {
+    global stopRequested
+    if !StartMacro("Sandstorm Tavern")
+        return
+    ; Dialogue choices per tavern run, one per 15 s step.
+    dialogueKeys := ["n", "y", "n", "n", "y"]
+    dialogueWait := 15000
+    loop {
+        if stopRequested
+            break
+        GameHold("w", 900)
+        SleepChecked 1000
+        GameSend "f"
+        SleepChecked dialogueWait
+        for key in dialogueKeys {
+            if stopRequested
+                break
+            GameSend key
+            SleepChecked dialogueWait
+        }
+        if stopRequested
+            break
+        SleepChecked dialogueWait
+        GameSend "f"
+        SleepChecked dialogueWait
+    }
+    StopMacro()
+}
+
 RunAutoCode(*) {
     AutoCodeShowGui()
 }
@@ -418,6 +447,7 @@ RunAutoCode(*) {
 ^!6:: RunGatherHerbFleethoof() ; Ctrl+Alt+6 — Gather Herb (Fleethoof)
 ^!m:: RunMineStone()   ; Ctrl+Alt+M — Mine Stone
 ^!p:: RunPlaySwing()   ; Ctrl+Alt+P — Play Swing
+^!t:: RunSandstormTavern() ; Ctrl+Alt+T — Sandstorm Tavern
 
 ; =============================================================================
 ; GUI — Feature list with hotkeys, notes, and Start buttons
@@ -450,7 +480,10 @@ global features := [{ name: "Catch Fish",
                                 notes: "Requires: Weapon - Thundercry Blade`nKeys: Q (Martial Art Skill), ``/~ (Special Skill)" }, { name: "Play Swing",
                                     hotkey: "Ctrl+Alt+P",
                                     url: "",
-                                    notes: "Go to Swing Play on a boat, press F to sit down first`nKeys: F (Interaction)" },
+                                    notes: "Go to Swing Play on a boat, press F to sit down first`nKeys: F (Interaction)" }, { name: "Sandstorm Tavern",
+                                        hotkey: "Ctrl+Alt+T",
+                                        url: "",
+                                        notes: "Requires: Speed ×3, tick `"Don't remind today`"`nKeys: N, Y (cycle: N -> Y -> N -> N -> Y)" },
 { name: "Redeem Gift Codes",
     hotkey: "F1/F2/F3/F5",
     url: "https://www.youtube.com/watch?v=EMZKfgAHP5k",
@@ -460,7 +493,7 @@ global features := [{ name: "Catch Fish",
 
 ; Function references in the same order as features above.
 global macroFuncs := [RunCatchFish, RunToxicPowderWBW, RunToxicPowderSilkbind, RunBeefTendon, RunGatherHerbF,
-    RunGatherHerbN, RunGatherHerbFleethoof, RunMineStone, RunPlaySwing, RunAutoCode]
+    RunGatherHerbN, RunGatherHerbFleethoof, RunMineStone, RunPlaySwing, RunSandstormTavern, RunAutoCode]
 
 AppGui := Gui("-Resize", APP_TITLE)
 
