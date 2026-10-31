@@ -401,6 +401,61 @@ RunPlaySwing(*) {
     StopMacro()
 }
 
+RunSandstormTavern(*) {
+    global stopRequested, GAME_TITLE
+    if !StartMacro("Sandstorm Tavern")
+        return
+    if !FocusGame() {
+        StopMacro()
+        return
+    }
+    SleepChecked 1500
+    loop {
+        if stopRequested
+            break
+        WinActivate(GAME_TITLE)
+        Send("{w down}")
+        Sleep(900)
+        Send("{w up}")
+        Sleep(1000)
+        if stopRequested
+            break
+        WinActivate(GAME_TITLE)
+        Send("f")
+        Sleep(15000)
+        if stopRequested
+            break
+        WinActivate(GAME_TITLE)
+        Send("n")
+        Sleep(15000)
+        if stopRequested
+            break
+        Send("y")
+        Sleep(15000)
+        if stopRequested
+            break
+        Send("n")
+        Sleep(15000)
+        if stopRequested
+            break
+        Send("n")
+        Sleep(15000)
+        if stopRequested
+            break
+        Send("y")
+        Sleep(15000)
+        if stopRequested
+            break
+        Sleep(15000)
+        if stopRequested
+            break
+        WinActivate(GAME_TITLE)
+        Send("f")
+        Sleep(15000)
+    }
+    StopMacro()
+}
+
 RunAutoCode(*) {
     AutoCodeShowGui()
 }
@@ -418,6 +473,7 @@ RunAutoCode(*) {
 ^!6:: RunGatherHerbFleethoof() ; Ctrl+Alt+6 — Gather Herb (Fleethoof)
 ^!m:: RunMineStone()   ; Ctrl+Alt+M — Mine Stone
 ^!p:: RunPlaySwing()   ; Ctrl+Alt+P — Play Swing
+^!t:: RunSandstormTavern() ; Ctrl+Alt+T — Sandstorm Tavern
 
 ; =============================================================================
 ; GUI — Feature list with hotkeys, notes, and Start buttons
@@ -450,7 +506,10 @@ global features := [{ name: "Catch Fish",
                                 notes: "Requires: Weapon - Thundercry Blade`nKeys: Q (Martial Art Skill), ``/~ (Special Skill)" }, { name: "Play Swing",
                                     hotkey: "Ctrl+Alt+P",
                                     url: "",
-                                    notes: "Go to Swing Play on a boat, press F to sit down first`nKeys: F (Interaction)" },
+                                    notes: "Go to Swing Play on a boat, press F to sit down first`nKeys: F (Interaction)" }, { name: "Sandstorm Tavern",
+                                        hotkey: "Ctrl+Alt+T",
+                                        url: "",
+                                        notes: "Auto cycle at Sandstorm Tavern`nKeys: N, Y (cycle: N -> Y -> N -> N -> Y)" },
 { name: "Redeem Gift Codes",
     hotkey: "F1/F2/F3/F5",
     url: "https://www.youtube.com/watch?v=EMZKfgAHP5k",
@@ -460,7 +519,7 @@ global features := [{ name: "Catch Fish",
 
 ; Function references in the same order as features above.
 global macroFuncs := [RunCatchFish, RunToxicPowderWBW, RunToxicPowderSilkbind, RunBeefTendon, RunGatherHerbF,
-    RunGatherHerbN, RunGatherHerbFleethoof, RunMineStone, RunPlaySwing, RunAutoCode]
+    RunGatherHerbN, RunGatherHerbFleethoof, RunMineStone, RunPlaySwing, RunSandstormTavern, RunAutoCode]
 
 AppGui := Gui("-Resize", APP_TITLE)
 

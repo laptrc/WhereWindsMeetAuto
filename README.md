@@ -21,6 +21,7 @@ AutoHotkey v2 automation script for _Where Winds Meet_ with a GUI launcher and h
 | ⭐ Gather Herb (Fleethoof)                | Ctrl+Alt+6 | Horse — Fleethoof, 1 set to Spirit Gift - Gather           |
 | Mine Stone                                | Ctrl+Alt+M | Weapon — Thundercry Blade                                  |
 | Play Swing                                | Ctrl+Alt+P | Sit on a boat swing first                                  |
+| Sandstorm Tavern                          | Ctrl+Alt+T | Speed ×3, tick "Don't remind me today" / "Don't show this again today" |
 | Redeem Gift Codes                         | F1/F2/F3/F5| Set P1/P2/P3 points in Auto Code sub window               |
 
 ---
