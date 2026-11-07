@@ -45,7 +45,7 @@ AutoHotkey v2 automation script for _Where Winds Meet_ with a GUI launcher and h
 - **Administrator required** — Both the `.exe` and `.ahk` must be run as administrator.
 - **Auto-focus** — Clicking **Start** will automatically bring the game window into focus.
 - **One macro at a time** — Only one macro can run at a time. Press **Esc** to stop the active macro before starting a new one.
-- **Monthly Pass popup auto-dismiss** — While any macro is active, the script sends `Space` once during `04:01 Asia/Ho_Chi_Minh (UTC+7)` to close the Monthly Pass popup.
+- **Monthly Pass popup auto-dismiss** — While any macro is active, the script sends `Space` once during `04:05 Asia/Ho_Chi_Minh (UTC+7)` to close the Monthly Pass popup.
 - **Auto Code sub window** — Start **Redeem Gift Codes** from the main GUI to open a dedicated window. Choose a profile from the select box (profiles are named by resolution like `1920x1080`), then use `F1`/`F2`/`F3` to set points, `F5` to start, `Esc` to stop while running. Forked from [WhereWindsMeet-AutoCode](https://github.com/yeucon02vn/WhereWindsMeet-AutoCode).
 
     ![Where Winds Meet Auto Code GUI](assets/WhereWindsMeetAutoCode.png)
