@@ -501,28 +501,36 @@ AppGui := Gui("-Resize", APP_TITLE)
 AppGui.SetFont("s9 Norm", "Segoe UI")
 AppGui.Add("Text", "x12 y15 w98", "Active Macro:")
 AppGui.SetFont("s10 Bold", "Segoe UI")
-global activeLabel := AppGui.Add("Text", "x113 y14 w379", "None")
+global activeLabel := AppGui.Add("Text", "x113 y14 w879", "None")
 
 ; --- Divider ---
-AppGui.Add("Text", "x8 y34 w484 h1 +0x10")
+AppGui.Add("Text", "x8 y34 w984 h1 +0x10")
 
-; --- Column headers ---
+; --- Column headers (2 columns) ---
 AppGui.SetFont("s8 Bold", "Segoe UI")
 AppGui.Add("Text", "x12  y44 w294", "FEATURE")
 AppGui.Add("Text", "x314 y44 w90", "HOTKEY")
 AppGui.Add("Text", "x412 y44 w80", "ACTION")
+AppGui.Add("Text", "x502 y44 w294", "FEATURE")
+AppGui.Add("Text", "x804 y44 w90", "HOTKEY")
+AppGui.Add("Text", "x902 y44 w80", "ACTION")
 
-; --- Feature rows ---
-rowY := 62
+; --- Feature rows (2 columns: feature 1-half left, rest right) ---
+colX := [12, 502]
+colY := [62, 62]
+half := Ceil(features.Length / 2)
 for i, feat in features {
     fn := macroFuncs[i]
+    c := (i <= half) ? 1 : 2
+    x := colX[c]
+    rowY := colY[c]
 
     ; Feature name (bold heading), hotkey, and Start button
     AppGui.SetFont("s10 Bold", "Segoe UI")
-    AppGui.Add("Text", "x12  y" rowY " w294 h22", feat.name)
+    AppGui.Add("Text", "x" x "  y" rowY " w294 h22", feat.name)
     AppGui.SetFont("s10 Norm", "Segoe UI")
-    AppGui.Add("Text", "x314 y" rowY " w90 h22", feat.hotkey)
-    btn := AppGui.Add("Button", "x412 y" (rowY - 1) " w80 h24", "Start")
+    AppGui.Add("Text", "x" (x + 302) " y" rowY " w90 h22", feat.hotkey)
+    btn := AppGui.Add("Button", "x" (x + 400) " y" (rowY - 1) " w80 h24", "Start")
     btn.OnEvent("Click", MakeStartHandler(fn, feat.HasProp("focusGame") ? feat.focusGame : true))
     rowY += 24
 
@@ -530,40 +538,41 @@ for i, feat in features {
     AppGui.SetFont("s8 Norm", "Segoe UI")
     noteLines := StrSplit(feat.notes, "`n").Length
     noteH := noteLines * 16
-    AppGui.Add("Text", "x24 y" rowY " w460 h" noteH, feat.notes)
+    AppGui.Add("Text", "x" (x + 12) " y" rowY " w460 h" noteH, feat.notes)
     rowY += noteH
     if feat.url != "" {
         linkH := 16
-        lnk := AppGui.Add("Link", "x24 y" rowY " w460 h" linkH, MakeUrlText(feat.url))
+        lnk := AppGui.Add("Link", "x" (x + 12) " y" rowY " w460 h" linkH, MakeUrlText(feat.url))
         lnk.OnEvent("Click", OpenLink)
         rowY += linkH
     }
     rowY += 12
+    colY[c] := rowY
 }
 
 ; --- Divider ---
-AppGui.Add("Text", "x8 y" rowY " w484 h1 +0x10")
-rowY += 10
+AppGui.Add("Text", "x8 y" Max(colY[1], colY[2]) " w984 h1 +0x10")
+rowY := Max(colY[1], colY[2]) + 10
 
 ; --- Stop button + hint ---
 AppGui.SetFont("s9 Norm", "Segoe UI")
 stopBtn := AppGui.Add("Button", "x12 y" rowY " w90 h26", "Stop")
 stopBtn.OnEvent("Click", (*) => StopMacroRequest(true))
 AppGui.SetFont("s8 Norm", "Segoe UI")
-AppGui.Add("Text", "x112 y" (rowY + 6) " w380", "Esc stops macro when game is focused (or during Redeem Gift Codes).")
+AppGui.Add("Text", "x112 y" (rowY + 6) " w880", "Esc stops macro when game is focused (or during Redeem Gift Codes).")
 rowY += 34
 
 ; --- Game window title input ---
 AppGui.SetFont("s9 Norm", "Segoe UI")
 AppGui.Add("Text", "x12 y" rowY " w130 h21", "Game Window Title:")
-global gameTitleEdit := AppGui.AddEdit("x145 y" rowY " w247 h21", GAME_TITLE)
-applyTitleBtn := AppGui.Add("Button", "x397 y" (rowY - 1) " w80 h24", "Apply")
+global gameTitleEdit := AppGui.AddEdit("x145 y" rowY " w747 h21", GAME_TITLE)
+applyTitleBtn := AppGui.Add("Button", "x897 y" (rowY - 1) " w80 h24", "Apply")
 applyTitleBtn.OnEvent("Click", ApplyGameTitle)
 rowY += 30
 AppGui.SetFont("s8 Norm", "Segoe UI")
-AppGui.Add("Text", "x12 y" rowY " w480", "Note: while any macro is active, the script sends Space once during 04:05 Asia/Ho_Chi_Minh (UTC+7) to close the Monthly Pass popup.")
+AppGui.Add("Text", "x12 y" rowY " w980", "Note: while any macro is active, the script sends Space once during 04:05 Asia/Ho_Chi_Minh (UTC+7) to close the Monthly Pass popup.")
 
-AppGui.Show("w500")
+AppGui.Show("w1000")
 
 ; --- Close button hides the window instead of exiting ---
 AppGui.OnEvent("Close", (*) => AppGui.Hide())
